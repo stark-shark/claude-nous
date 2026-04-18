@@ -29,12 +29,50 @@ The plugin ships with:
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 20+ (only needed to run the MCP server; no build required)
 - Claude Code
 
-### Install
+### Install from GitHub (recommended)
 
-Clone to `~/.claude/recall/`:
+Add to your Claude Code settings (`~/.claude/settings.json`):
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "recall": {
+      "source": {
+        "source": "github",
+        "repo": "stark-shark/claude-recall"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "recall@recall": true
+  }
+}
+```
+
+Add an `.mcp.json` in your project root (or use `claude mcp add` for global scope). The path below points to Claude Code's plugin cache where the repo auto-installs:
+
+```json
+{
+  "mcpServers": {
+    "recall": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["<USER_HOME>/.claude/plugins/cache/recall/recall/<VERSION>/dist/index.js"]
+    }
+  }
+}
+```
+
+Replace `<USER_HOME>` (e.g., `C:/Users/YourName` on Windows or `/Users/yourname` on macOS) and `<VERSION>` with the current plugin version (e.g., `0.1.0`). The pre-built `dist/` ships with the repo — no `npm install` or build step needed.
+
+Restart Claude Code. Verify with `/plugin` (should show Recall enabled) and `/mcp` (should show the recall server connected).
+
+### Install from local clone (for development)
+
+If you want to modify the plugin:
 
 ```bash
 cd ~/.claude
@@ -44,39 +82,22 @@ npm install
 npm run build
 ```
 
-Add to your global Claude Code settings (`~/.claude/settings.json`):
+Point `extraKnownMarketplaces` at the local directory instead of GitHub:
 
 ```json
 {
-  "enabledPlugins": {
-    "recall@recall": true
-  },
   "extraKnownMarketplaces": {
     "recall": {
       "source": {
         "source": "directory",
-        "path": "C:/Users/YOUR_USERNAME/.claude/recall"
+        "path": "<USER_HOME>/.claude/recall"
       }
     }
   }
 }
 ```
 
-Add an `.mcp.json` in your project root (or use `claude mcp add` for global scope):
-
-```json
-{
-  "mcpServers": {
-    "recall": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["C:/Users/YOUR_USERNAME/.claude/recall/dist/index.js"]
-    }
-  }
-}
-```
-
-Restart Claude Code. Verify with `/plugin` (should show Recall) and `/mcp` (should show the recall server connected).
+And point `.mcp.json` at `<USER_HOME>/.claude/recall/dist/index.js` instead of the plugin cache path.
 
 ## Configuration
 
