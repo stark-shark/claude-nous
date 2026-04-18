@@ -42,3 +42,27 @@ describe("stripHeader", () => {
     expect(stripHeader("---\nT:fb | T\nD:d\n---\nbody")).toBe("body");
   });
 });
+
+describe("parseHeader field validation", () => {
+  it("drops non-ISO dates", () => {
+    const header = parseHeader("---\nT:fb | T\nD:d\nC:not-a-date\nU:2026-99-99\n---\nbody");
+    expect(header?.created).toBeUndefined();
+    expect(header?.updated).toBeUndefined();
+  });
+
+  it("drops non-integer access counts", () => {
+    const header = parseHeader("---\nT:fb | T\nD:d\nA:abc\n---\nbody");
+    expect(header?.accessCount).toBeUndefined();
+  });
+
+  it("rejects impossible calendar dates", () => {
+    const header = parseHeader("---\nT:fb | T\nD:d\nC:2026-02-30\n---\nbody");
+    expect(header?.created).toBeUndefined();
+  });
+
+  it("accepts valid ISO dates and integer A", () => {
+    const header = parseHeader("---\nT:fb | T\nD:d\nC:2026-01-15\nA:7\n---\nbody");
+    expect(header?.created).toBe("2026-01-15");
+    expect(header?.accessCount).toBe(7);
+  });
+});

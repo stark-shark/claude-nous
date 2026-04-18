@@ -38,11 +38,24 @@ export function upsertIndexEntry(indexPath, filename, name, description, maxLine
     if (!found) {
         lines.push(newEntry);
     }
-    // Enforce max lines
+    // Enforce max lines: keep the index header and the newest entries (drop oldest)
+    let truncated = 0;
     if (lines.length > maxLines) {
-        lines = lines.slice(0, maxLines);
+        // Preserve leading non-entry lines (header + blank) so the file stays readable
+        let headerEnd = 0;
+        while (headerEnd < lines.length && !ENTRY_REGEX.test(lines[headerEnd].trim())) {
+            headerEnd++;
+        }
+        const header = lines.slice(0, headerEnd);
+        const entries = lines.slice(headerEnd);
+        const keepEntries = Math.max(0, maxLines - header.length);
+        if (entries.length > keepEntries) {
+            truncated = entries.length - keepEntries;
+            lines = [...header, ...entries.slice(truncated)];
+        }
     }
     fs.writeFileSync(indexPath, lines.join("\n") + "\n", "utf-8");
+    return { truncated };
 }
 export function removeIndexEntry(indexPath, filename) {
     if (!fs.existsSync(indexPath))

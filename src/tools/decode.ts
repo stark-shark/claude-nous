@@ -33,7 +33,12 @@ function findAndDecode(
       if (!f.endsWith(".md") || f === "MEMORY.md" || f === "REGISTRY.md") continue;
 
       const filePath = path.join(memoryDir, f);
-      const content = fs.readFileSync(filePath, "utf-8");
+      let content: string;
+      try {
+        content = fs.readFileSync(filePath, "utf-8");
+      } catch {
+        continue;
+      }
       const header = parseHeader(content);
       if (!header) continue;
 
@@ -71,7 +76,12 @@ export function handleDecode(
       for (const f of fs.readdirSync(memoryDir)) {
         if (!f.endsWith(".md") || f === "MEMORY.md" || f === "REGISTRY.md") continue;
 
-        const content = fs.readFileSync(path.join(memoryDir, f), "utf-8");
+        let content: string;
+        try {
+          content = fs.readFileSync(path.join(memoryDir, f), "utf-8");
+        } catch {
+          continue;
+        }
         const header = parseHeader(content);
         if (!header) continue;
 

@@ -1,4 +1,5 @@
 export type Registry = Map<string, string>;
+export declare function isValidCode(code: string): boolean;
 export interface RegistryResult {
     ok: boolean;
     error?: string;

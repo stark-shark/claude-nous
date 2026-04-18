@@ -1,4 +1,11 @@
 import * as fs from "node:fs";
+function escapeRegex(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+const CODE_PATTERN = /^\$[\w-]+$/;
+export function isValidCode(code) {
+    return CODE_PATTERN.test(code);
+}
 export function loadRegistry(registryPath) {
     const registry = new Map();
     if (!fs.existsSync(registryPath)) {
@@ -25,7 +32,7 @@ export function saveRegistry(registryPath, registry) {
         // Update existing entries
         for (const [code, expansion] of registry) {
             if (existingEntries.has(code)) {
-                content = content.replace(new RegExp(`^\\${code}\\s*=.*$`, "m"), `${code} = ${expansion}`);
+                content = content.replace(new RegExp(`^${escapeRegex(code)}\\s*=.*$`, "m"), `${code} = ${expansion}`);
             }
         }
         // Append new entries at end
@@ -49,10 +56,20 @@ export function saveRegistry(registryPath, registry) {
     }
 }
 export function addEntry(registry, code, expansion) {
+    if (!isValidCode(code)) {
+        return {
+            ok: false,
+            error: `Invalid entity code '${code}'. Codes must match $[\\w-]+ (e.g., $emp, $auth-flow).`,
+        };
+    }
+    const trimmed = expansion.trim();
+    if (!trimmed) {
+        return { ok: false, error: "Expansion cannot be empty." };
+    }
     if (registry.has(code)) {
         return { ok: false, error: `Entity '${code}' already exists: ${registry.get(code)}` };
     }
-    registry.set(code, expansion);
+    registry.set(code, trimmed);
     return { ok: true };
 }
 export function removeEntry(registry, code) {

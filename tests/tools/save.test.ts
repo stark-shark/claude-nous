@@ -35,4 +35,37 @@ describe("handleSave", () => {
     const index = fs.readFileSync(path.join(tmpDir, "MEMORY.md"), "utf-8");
     expect(index).toContain("[FK CASCADE]");
   });
+
+  it("rejects slug collisions between distinct memory names", () => {
+    handleSave({ name: "FK CASCADE", type: "fb", description: "desc", content: "rule: a\n:: b\n(+) c" }, tmpDir, DEFAULT_CONFIG);
+    const result = handleSave({ name: "FK-CASCADE", type: "fb", description: "desc", content: "rule: x\n:: y\n(+) z" }, tmpDir, DEFAULT_CONFIG);
+    expect(result.isError).toBe(true);
+    expect(result.text).toContain("collision");
+  });
+
+  it("treats a second save with the same name as an update", () => {
+    handleSave({ name: "FK CASCADE", type: "fb", description: "v1", content: "rule: a\n:: b\n(+) c" }, tmpDir, DEFAULT_CONFIG);
+    const result = handleSave({ name: "FK CASCADE", type: "fb", description: "v2", content: "rule: x\n:: y\n(+) z" }, tmpDir, DEFAULT_CONFIG);
+    expect(result.isError).toBeFalsy();
+    expect(result.text).toContain("Updated");
+  });
+
+  it("warns when the index hits indexMaxLines", () => {
+    const cappedConfig = { ...DEFAULT_CONFIG, indexMaxLines: 3 };
+    for (let i = 0; i < 5; i++) {
+      handleSave(
+        { name: `M${i}`, type: "fb", description: "d", content: `rule: ${i}\n:: r\n(+) t` },
+        tmpDir,
+        cappedConfig
+      );
+    }
+    const last = handleSave(
+      { name: "LAST", type: "fb", description: "d", content: "rule: z\n:: r\n(+) t" },
+      tmpDir,
+      cappedConfig
+    );
+    expect(last.warnings.some((w) => w.includes("indexMaxLines"))).toBe(true);
+    const index = fs.readFileSync(path.join(tmpDir, "MEMORY.md"), "utf-8");
+    expect(index).toContain("LAST");
+  });
 });

@@ -1,4 +1,14 @@
 import { VALID_TYPES } from "./symbols.js";
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+export function isValidIsoDate(s) {
+    if (!ISO_DATE.test(s))
+        return false;
+    const d = new Date(s + "T00:00:00Z");
+    if (Number.isNaN(d.getTime()))
+        return false;
+    // Reject out-of-range days like 2026-02-30 that Date would silently roll over
+    return d.toISOString().slice(0, 10) === s;
+}
 export function parseHeader(content) {
     const lines = content.split("\n");
     let inHeader = false;
@@ -32,13 +42,20 @@ export function parseHeader(content) {
             description = trimmed.slice(2).trim();
         }
         else if (trimmed.startsWith("C:")) {
-            created = trimmed.slice(2).trim();
+            const raw = trimmed.slice(2).trim();
+            if (isValidIsoDate(raw))
+                created = raw;
         }
         else if (trimmed.startsWith("U:")) {
-            updated = trimmed.slice(2).trim();
+            const raw = trimmed.slice(2).trim();
+            if (isValidIsoDate(raw))
+                updated = raw;
         }
         else if (trimmed.startsWith("A:")) {
-            accessCount = parseInt(trimmed.slice(2).trim(), 10);
+            const raw = trimmed.slice(2).trim();
+            if (/^\d+$/.test(raw)) {
+                accessCount = parseInt(raw, 10);
+            }
         }
         else if (trimmed.startsWith("L:")) {
             links = trimmed

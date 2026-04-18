@@ -22,11 +22,22 @@ export function handleImport(
     return { text: `File not found: ${input.file}`, isError: true };
   }
 
-  const raw = fs.readFileSync(input.file, "utf-8");
-  const data = JSON.parse(raw);
+  let raw: string;
+  try {
+    raw = fs.readFileSync(input.file, "utf-8");
+  } catch (err) {
+    return { text: `Failed to read ${input.file}: ${(err as Error).message}`, isError: true };
+  }
+
+  let data: { version?: number; registry?: Record<string, string>; memories?: Array<{ filename: string; header: { type?: string; name?: string; description?: string; created?: string }; content: string }> };
+  try {
+    data = JSON.parse(raw);
+  } catch (err) {
+    return { text: `Invalid JSON in ${input.file}: ${(err as Error).message}`, isError: true };
+  }
 
   if (data.version !== 1) {
-    return { text: `Unsupported export version: ${data.version}`, isError: true };
+    return { text: `Unsupported export version: ${data.version ?? "missing"}`, isError: true };
   }
 
   let imported = 0;

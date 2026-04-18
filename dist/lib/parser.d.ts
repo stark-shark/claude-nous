@@ -8,6 +8,7 @@ export interface MemoryHeader {
     accessCount?: number;
     links?: string[];
 }
+export declare function isValidIsoDate(s: string): boolean;
 export declare function parseHeader(content: string): MemoryHeader | null;
 export declare function serializeHeader(header: MemoryHeader): string;
 export declare function stripHeader(content: string): string;

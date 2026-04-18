@@ -5,10 +5,22 @@ export function handleImport(input, memoryDir, config) {
     if (!fs.existsSync(input.file)) {
         return { text: `File not found: ${input.file}`, isError: true };
     }
-    const raw = fs.readFileSync(input.file, "utf-8");
-    const data = JSON.parse(raw);
+    let raw;
+    try {
+        raw = fs.readFileSync(input.file, "utf-8");
+    }
+    catch (err) {
+        return { text: `Failed to read ${input.file}: ${err.message}`, isError: true };
+    }
+    let data;
+    try {
+        data = JSON.parse(raw);
+    }
+    catch (err) {
+        return { text: `Invalid JSON in ${input.file}: ${err.message}`, isError: true };
+    }
     if (data.version !== 1) {
-        return { text: `Unsupported export version: ${data.version}`, isError: true };
+        return { text: `Unsupported export version: ${data.version ?? "missing"}`, isError: true };
     }
     let imported = 0;
     let skipped = 0;

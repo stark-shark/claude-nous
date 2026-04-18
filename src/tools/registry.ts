@@ -4,6 +4,7 @@ import {
   saveRegistry,
   addEntry,
   removeEntry,
+  isValidCode,
 } from "../lib/registry.js";
 
 export interface RegistryInput {
@@ -52,12 +53,22 @@ export function handleRegistry(
       if (!input.code || !input.expansion) {
         return { text: "Provide 'code' and 'expansion' for update.", isError: true };
       }
+      if (!isValidCode(input.code)) {
+        return {
+          text: `Invalid entity code '${input.code}'. Codes must match $[\\w-]+ (e.g., $emp, $auth-flow).`,
+          isError: true,
+        };
+      }
+      const trimmed = input.expansion.trim();
+      if (!trimmed) {
+        return { text: "Expansion cannot be empty.", isError: true };
+      }
       if (!registry.has(input.code)) {
         return { text: `Entity '${input.code}' not found.`, isError: true };
       }
-      registry.set(input.code, input.expansion);
+      registry.set(input.code, trimmed);
       saveRegistry(registryPath, registry);
-      return { text: `Updated: ${input.code} = ${input.expansion}` };
+      return { text: `Updated: ${input.code} = ${trimmed}` };
     }
 
     case "remove": {

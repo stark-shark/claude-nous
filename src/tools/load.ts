@@ -34,10 +34,14 @@ function findMemoryFile(
       }
 
       if (!isFilename) {
-        const content = fs.readFileSync(path.join(memoryDir, f), "utf-8");
-        const header = parseHeader(content);
-        if (header && header.name.toLowerCase() === nameOrFile.toLowerCase()) {
-          return { filePath: path.join(memoryDir, f), memoryDir, projectHash };
+        try {
+          const content = fs.readFileSync(path.join(memoryDir, f), "utf-8");
+          const header = parseHeader(content);
+          if (header && header.name.toLowerCase() === nameOrFile.toLowerCase()) {
+            return { filePath: path.join(memoryDir, f), memoryDir, projectHash };
+          }
+        } catch {
+          // Skip unreadable files and continue searching
         }
       }
     }

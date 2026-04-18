@@ -2,9 +2,16 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { RecallConfig } from "../lib/config.js";
 import type { MemoryDirEntry } from "../lib/memory-dir.js";
-import { parseHeader } from "../lib/parser.js";
+import { parseHeader, stripHeader } from "../lib/parser.js";
 import { loadRegistry, findUnknownEntities } from "../lib/registry.js";
-import { TYPE_NAMES, type MemoryType } from "../lib/symbols.js";
+import { decodeMemory } from "../lib/decode.js";
+import { hashContent } from "../lib/dedup.js";
+import {
+  COMPRESSION_TARGETS,
+  TYPE_NAMES,
+  VALID_TYPES,
+  type MemoryType,
+} from "../lib/symbols.js";
 
 type CheckType = "stale" | "registry" | "compression" | "links" | "duplicates" | "stats" | "all";
 
@@ -37,7 +44,12 @@ function loadAllMemories(memoryDirs: MemoryDirEntry[]): MemoryInfo[] {
     for (const f of fs.readdirSync(memoryDir)) {
       if (!f.endsWith(".md") || f === "MEMORY.md" || f === "REGISTRY.md") continue;
 
-      const content = fs.readFileSync(path.join(memoryDir, f), "utf-8");
+      let content: string;
+      try {
+        content = fs.readFileSync(path.join(memoryDir, f), "utf-8");
+      } catch {
+        continue;
+      }
       const header = parseHeader(content);
       if (!header) continue;
 
@@ -146,14 +158,38 @@ function checkRegistry(memories: MemoryInfo[], memoryDirs: MemoryDirEntry[], reg
 }
 
 function checkLinks(memories: MemoryInfo[]): string {
-  const allFilenames = new Set(memories.map((m) => m.filename.replace(".md", "")));
+  // Build an index keyed by project hash so cross-project links (hash::slug) can resolve.
+  const byProject = new Map<string, Set<string>>();
+  for (const m of memories) {
+    const slug = m.filename.replace(".md", "");
+    const set = byProject.get(m.project) ?? new Set<string>();
+    set.add(slug);
+    byProject.set(m.project, set);
+  }
+
   const issues: string[] = [];
 
   for (const m of memories) {
     for (const link of m.links) {
-      if (link.includes("::")) continue; // cross-project, skip for now
-      if (!allFilenames.has(link)) {
-        issues.push(`  '${m.name}' has broken link to '${link}'`);
+      if (link.includes("::")) {
+        const [projectHash, slug] = link.split("::", 2);
+        if (!projectHash || !slug) {
+          issues.push(`  '${m.name}' has malformed cross-project link '${link}' (expected hash::slug)`);
+          continue;
+        }
+        const targetSet = byProject.get(projectHash);
+        if (!targetSet) {
+          issues.push(`  '${m.name}' links to unknown project '${projectHash}' via '${link}'`);
+          continue;
+        }
+        if (!targetSet.has(slug)) {
+          issues.push(`  '${m.name}' has broken cross-project link to '${link}'`);
+        }
+      } else {
+        const sameProject = byProject.get(m.project);
+        if (!sameProject || !sameProject.has(link)) {
+          issues.push(`  '${m.name}' has broken link to '${link}'`);
+        }
       }
     }
   }
@@ -162,13 +198,82 @@ function checkLinks(memories: MemoryInfo[]): string {
   return `Links — ${issues.length} broken:\n${issues.join("\n")}`;
 }
 
+function checkDuplicates(memories: MemoryInfo[]): string {
+  const hashes = new Map<string, MemoryInfo[]>();
+  for (const m of memories) {
+    const body = stripHeader(m.content);
+    if (!body) continue;
+    const h = hashContent(body);
+    const bucket = hashes.get(h) ?? [];
+    bucket.push(m);
+    hashes.set(h, bucket);
+  }
+
+  const issues: string[] = [];
+  for (const bucket of hashes.values()) {
+    if (bucket.length > 1) {
+      const names = bucket.map((m) => `'${m.name}' [${m.project}]`).join(", ");
+      issues.push(`  Identical content: ${names}`);
+    }
+  }
+
+  if (issues.length === 0) return "Duplicates — no identical memories";
+  return `Duplicates — ${issues.length} group(s):\n${issues.join("\n")}`;
+}
+
+function checkCompression(
+  memories: MemoryInfo[],
+  memoryDirs: MemoryDirEntry[],
+  config: RecallConfig
+): string {
+  // Build per-project registry cache so decodeMemory uses the right expansions.
+  const registries = new Map<string, ReturnType<typeof loadRegistry>>();
+  for (const { projectHash, memoryDir } of memoryDirs) {
+    registries.set(projectHash, loadRegistry(path.join(memoryDir, config.registryFile)));
+  }
+
+  const tolerance = config.healthChecks.compressionTolerancePct;
+  const issues: string[] = [];
+
+  for (const m of memories) {
+    if (!VALID_TYPES.includes(m.type)) continue;
+    const target = COMPRESSION_TARGETS[m.type];
+    if (!target) continue;
+
+    const body = stripHeader(m.content);
+    if (!body.trim()) continue;
+
+    const registry = registries.get(m.project) ?? new Map();
+    const decoded = decodeMemory(body, registry);
+    if (decoded.length === 0) continue;
+
+    // ratio = how much shorter the compressed form is vs decoded, as percent.
+    const ratio = (1 - body.length / decoded.length) * 100;
+    const min = target.min - tolerance;
+    const max = target.max + tolerance;
+
+    if (ratio < min) {
+      issues.push(
+        `  '${m.name}' (${m.type}) — ${ratio.toFixed(1)}% compressed, below target ${target.min}–${target.max}% (tolerance ±${tolerance}). Consider tighter notation.`
+      );
+    } else if (ratio > max) {
+      issues.push(
+        `  '${m.name}' (${m.type}) — ${ratio.toFixed(1)}% compressed, above target ${target.min}–${target.max}% (tolerance ±${tolerance}). Content may be over-compressed or too short.`
+      );
+    }
+  }
+
+  if (issues.length === 0) return "Compression — all memories within target ratios";
+  return `Compression — ${issues.length} outside target:\n${issues.join("\n")}`;
+}
+
 export function handleCheck(
   input: CheckInput,
   memoryDirs: MemoryDirEntry[],
   config: RecallConfig
 ): CheckResult {
   const checks = input.checks.includes("all")
-    ? ["stats", "stale", "registry", "links"] as CheckType[]
+    ? ["stats", "stale", "registry", "links", "compression", "duplicates"] as CheckType[]
     : input.checks;
 
   const memories = loadAllMemories(memoryDirs);
@@ -189,10 +294,10 @@ export function handleCheck(
         sections.push(checkLinks(memories));
         break;
       case "compression":
-        sections.push("Compression — not yet implemented");
+        sections.push(checkCompression(memories, memoryDirs, config));
         break;
       case "duplicates":
-        sections.push("Duplicates — not yet implemented");
+        sections.push(checkDuplicates(memories));
         break;
     }
   }

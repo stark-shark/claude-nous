@@ -45,9 +45,17 @@ export function loadConfig(configPath: string): RecallConfig {
     return { ...DEFAULT_CONFIG };
   }
 
-  const raw = fs.readFileSync(configPath, "utf-8");
-  const stripped = stripJsoncComments(raw);
-  const userConfig = JSON.parse(stripped);
+  let userConfig: Partial<RecallConfig>;
+  try {
+    const raw = fs.readFileSync(configPath, "utf-8");
+    const stripped = stripJsoncComments(raw);
+    userConfig = JSON.parse(stripped);
+  } catch (err) {
+    console.error(
+      `[recall] Failed to parse config at ${configPath}: ${(err as Error).message}. Using defaults.`
+    );
+    return { ...DEFAULT_CONFIG };
+  }
 
   return {
     ...DEFAULT_CONFIG,

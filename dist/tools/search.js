@@ -13,7 +13,13 @@ export function handleSearch(input, memoryDirs) {
         for (const f of fs.readdirSync(memoryDir)) {
             if (!f.endsWith(".md") || f === "MEMORY.md" || f === "REGISTRY.md")
                 continue;
-            const content = fs.readFileSync(path.join(memoryDir, f), "utf-8");
+            let content;
+            try {
+                content = fs.readFileSync(path.join(memoryDir, f), "utf-8");
+            }
+            catch {
+                continue;
+            }
             const header = parseHeader(content);
             if (!header)
                 continue;

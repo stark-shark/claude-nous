@@ -23,9 +23,16 @@ export function loadConfig(configPath) {
     if (!fs.existsSync(configPath)) {
         return { ...DEFAULT_CONFIG };
     }
-    const raw = fs.readFileSync(configPath, "utf-8");
-    const stripped = stripJsoncComments(raw);
-    const userConfig = JSON.parse(stripped);
+    let userConfig;
+    try {
+        const raw = fs.readFileSync(configPath, "utf-8");
+        const stripped = stripJsoncComments(raw);
+        userConfig = JSON.parse(stripped);
+    }
+    catch (err) {
+        console.error(`[recall] Failed to parse config at ${configPath}: ${err.message}. Using defaults.`);
+        return { ...DEFAULT_CONFIG };
+    }
     return {
         ...DEFAULT_CONFIG,
         ...userConfig,

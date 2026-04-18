@@ -44,9 +44,14 @@ export function handleSave(input, memoryDir, config) {
     const existingFiles = new Map();
     for (const f of fs.readdirSync(memoryDir)) {
         if (f.endsWith(".md") && f !== "MEMORY.md" && f !== "REGISTRY.md" && f !== filename) {
-            const content = fs.readFileSync(path.join(memoryDir, f), "utf-8");
-            const body = stripHeader(content);
-            existingFiles.set(f, body);
+            try {
+                const content = fs.readFileSync(path.join(memoryDir, f), "utf-8");
+                const body = stripHeader(content);
+                existingFiles.set(f, body);
+            }
+            catch (err) {
+                warnings.push(`Skipped unreadable file ${f}: ${err.message}`);
+            }
         }
     }
     const duplicate = findDuplicate(input.content, existingFiles);
@@ -71,6 +76,16 @@ export function handleSave(input, memoryDir, config) {
     if (isUpdate) {
         const existing = fs.readFileSync(filePath, "utf-8");
         const existingHeader = parseHeader(existing);
+        // Detect slug collision: same filename but different logical memory name
+        if (existingHeader &&
+            existingHeader.name.toLowerCase() !== input.name.toLowerCase()) {
+            return {
+                text: `Filename collision: '${input.name}' slugs to '${filename}', which is already used by '${existingHeader.name}'. Rename one of the memories to avoid overwriting.`,
+                isError: true,
+                warnings: [],
+                filename,
+            };
+        }
         header = {
             type: input.type,
             name: input.name,
@@ -100,11 +115,22 @@ export function handleSave(input, memoryDir, config) {
     // Update index
     if (config.maintainIndex) {
         const indexPath = path.join(memoryDir, config.indexFile);
-        upsertIndexEntry(indexPath, filename, input.name, input.description, config.indexMaxLines);
+        const { truncated } = upsertIndexEntry(indexPath, filename, input.name, input.description, config.indexMaxLines);
+        if (truncated > 0) {
+            warnings.push(`${config.indexFile} reached indexMaxLines (${config.indexMaxLines}); dropped ${truncated} oldest entr${truncated === 1 ? "y" : "ies"}. Memory files themselves are untouched.`);
+        }
     }
-    // Maintain bidirectional links
+    // Maintain bidirectional links (best-effort; a failure here doesn't invalidate the save)
     if (config.headerFields.links && header.links && header.links.length > 0) {
-        ensureBidirectionalLinks(filename.replace(".md", ""), header.links, memoryDir);
+        try {
+            const { crossProject } = ensureBidirectionalLinks(filename.replace(".md", ""), header.links, memoryDir);
+            if (crossProject.length > 0) {
+                warnings.push(`Cross-project links (${crossProject.join(", ")}) are not auto-reversed. Add the reverse link manually in the target project if desired.`);
+            }
+        }
+        catch (err) {
+            warnings.push(`Bidirectional link update failed: ${err.message}. The memory was saved, but some target links may not point back. Run recall_check --links to verify.`);
+        }
     }
     const action = isUpdate ? "Updated" : "Saved";
     let text = `${action} memory: '${input.name}' (${input.type}) → ${filename}`;
