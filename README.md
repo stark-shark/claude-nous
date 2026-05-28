@@ -54,23 +54,9 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
 }
 ```
 
-Add an `.mcp.json` in your project root (or use `claude mcp add` for global scope). The path below points to Claude Code's plugin cache where the repo auto-installs:
+Restart Claude Code. That's it — the plugin self-registers its MCP server and SessionStart hook. Verify with `/plugin` (Recall should show enabled) and `/mcp` (the recall server should show connected). The pre-built `dist/` ships with the repo, so no `npm install` or build step is needed.
 
-```json
-{
-  "mcpServers": {
-    "recall": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["<USER_HOME>/.claude/plugins/cache/recall/recall/<VERSION>/dist/index.js"]
-    }
-  }
-}
-```
-
-Replace `<USER_HOME>` (e.g., `C:/Users/YourName` on Windows or `/Users/yourname` on macOS) and `<VERSION>` with the current plugin version (e.g., `0.1.0`). The pre-built `dist/` ships with the repo — no `npm install` or build step needed.
-
-Restart Claude Code. Verify with `/plugin` (should show Recall enabled) and `/mcp` (should show the recall server connected).
+If you previously added a manual `recall` entry under `mcpServers` in your `~/.claude/settings.json` or any project's `.mcp.json`, remove it — the plugin registers itself now and a duplicate will conflict.
 
 ### Install from local clone (for development)
 
@@ -99,7 +85,7 @@ Point `extraKnownMarketplaces` at the local directory instead of GitHub:
 }
 ```
 
-And point `.mcp.json` at `<USER_HOME>/.claude/recall/dist/index.js` instead of the plugin cache path.
+Replace `<USER_HOME>` with your home dir (e.g., `C:/Users/YourName` on Windows, `/Users/yourname` on macOS). No `.mcp.json` editing required — the plugin's bundled `.mcp.json` handles MCP server registration.
 
 ## Configuration
 
