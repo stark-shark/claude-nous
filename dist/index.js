@@ -24539,7 +24539,7 @@ ${mem.content}
 }
 
 // src/index.ts
-var VERSION = true ? "0.3.3" : "0.0.0-dev";
+var VERSION = true ? "0.4.0" : "0.0.0-dev";
 var SERVER_DIR = path12.join(os2.homedir(), ".claude", "recall");
 var CONFIG_PATH = path12.join(SERVER_DIR, "recall.config.jsonc");
 var config2 = loadConfig(CONFIG_PATH);

@@ -62,6 +62,21 @@ Use recall tools (not manual file Read/Write) for ALL memory operations:
 - **Health check requested** → `recall_check`
 - **User asks to decode/explain a memory** → `recall_decode`
 
+## Cost optimization: delegate to the `recall-worker` subagent
+
+The plugin ships a `recall-worker` subagent that runs on **Haiku** — it handles the same recall_* tools but at ~1/15th the cost. Use the Agent tool with `subagent_type: "recall-worker"` to delegate when:
+
+- **Batch operations** — multiple saves, loads, or searches in one request. The handoff overhead amortizes nicely.
+- **Large compressions** — turning a long transcript / discussion / file dump into a memory. The compression work is mechanical and Haiku does it well.
+- **Audits** — `recall_check` across many memories, `recall_export` of the full set, or bulk `recall_decode` to read several memories.
+
+Call the tools directly (not via the subagent) when:
+
+- **Single small save mid-flow** — the parent session already has the context loaded; handoff priming would exceed the save's own cost.
+- **Reasoning needs full parent context** — e.g., deciding what's worth saving from the current conversation state.
+
+The user always gets the final answer in the parent session — the subagent just does the mechanical work and returns a summary.
+
 ## Recall Notation
 
 Memories use compressed notation with these symbols:

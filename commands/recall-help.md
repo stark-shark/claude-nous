@@ -42,6 +42,14 @@ All tool calls should be wrapped in `TaskCreate` / `TaskUpdate` for clean progre
 
 ---
 
+## Cost optimization
+
+The plugin ships a `recall-worker` subagent that runs on **Haiku**. Claude can delegate memory ops to it when the work is mechanical (batch saves, large compressions, audits) — saving ~93% on those tool calls. For single tiny saves mid-flow, Claude calls the tools directly to avoid handoff overhead.
+
+You don't need to do anything to enable this — Claude picks the right path based on the operation. If you want to force one mode or the other, just say so ("use the recall-worker subagent for this" or "save this directly, no subagent").
+
+---
+
 ## Notation Cheatsheet
 
 | Symbol | Meaning | Example |
