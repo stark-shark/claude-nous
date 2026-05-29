@@ -66,3 +66,37 @@ describe("parseHeader field validation", () => {
     expect(header?.accessCount).toBe(7);
   });
 });
+
+describe("parseHeader with prepended non-Recall frontmatter (e.g. Obsidian)", () => {
+  // Obsidian-style YAML injection in front of the real Recall header.
+  // The parser must walk past non-T: frontmatter blocks to find the real one.
+  const obsidianPlusRecall = [
+    "---",
+    "name: plugin-must-bundle-deps",
+    "description: \"...\"",
+    "metadata:",
+    "  node_type: memory",
+    "  type: fb",
+    "---",
+    "",
+    "---",
+    "T:fb | plugin-must-bundle-deps",
+    "D:Claude Code plugins do NOT run `npm install` on install",
+    "C:2026-05-29",
+    "L:project_recall",
+    "---",
+    "body content",
+  ].join("\n");
+
+  it("parses the Recall header, not the Obsidian frontmatter", () => {
+    const header = parseHeader(obsidianPlusRecall);
+    expect(header?.type).toBe("fb");
+    expect(header?.name).toBe("plugin-must-bundle-deps");
+    expect(header?.created).toBe("2026-05-29");
+    expect(header?.links).toEqual(["project_recall"]);
+  });
+
+  it("stripHeader returns body, not the Recall header", () => {
+    expect(stripHeader(obsidianPlusRecall)).toBe("body content");
+  });
+});

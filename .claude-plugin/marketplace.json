@@ -9,7 +9,7 @@
     {
       "name": "recall",
       "description": "MCP tools for compressed memory notation — read, write, search, and manage memories with notation enforcement, cross-project search, and health checks.",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "source": "./"
     }
   ]

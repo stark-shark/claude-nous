@@ -20,9 +20,37 @@ export function isValidIsoDate(s: string): boolean {
   return d.toISOString().slice(0, 10) === s;
 }
 
+// Find the bounds of the Recall header block within the content.
+// Walks past any non-Recall frontmatter blocks (e.g. Obsidian-injected
+// `name:`/`description:`/`metadata:` YAML) and returns the line indices of
+// the opening and closing `---` for the block that contains the Recall
+// `T:` line. Returns null if no such block exists.
+function findRecallHeaderBounds(
+  lines: string[],
+): { open: number; close: number } | null {
+  let i = 0;
+  while (i < lines.length) {
+    while (i < lines.length && lines[i].trim() !== "---") i++;
+    if (i >= lines.length) return null;
+    const open = i;
+    i++;
+    let containsT = false;
+    while (i < lines.length && lines[i].trim() !== "---") {
+      if (lines[i].trim().startsWith("T:")) containsT = true;
+      i++;
+    }
+    if (i >= lines.length) return null;
+    if (containsT) return { open, close: i };
+    i++;
+  }
+  return null;
+}
+
 export function parseHeader(content: string): MemoryHeader | null {
   const lines = content.split("\n");
-  let inHeader = false;
+  const bounds = findRecallHeaderBounds(lines);
+  if (!bounds) return null;
+
   let type: string | undefined;
   let name: string | undefined;
   let description: string | undefined;
@@ -31,17 +59,8 @@ export function parseHeader(content: string): MemoryHeader | null {
   let accessCount: number | undefined;
   let links: string[] | undefined;
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed === "---") {
-      if (!inHeader) {
-        inHeader = true;
-        continue;
-      } else {
-        break;
-      }
-    }
-    if (!inHeader) continue;
+  for (let i = bounds.open + 1; i < bounds.close; i++) {
+    const trimmed = lines[i].trim();
 
     if (trimmed.startsWith("T:")) {
       const parts = trimmed.slice(2).split("|", 2);
@@ -101,11 +120,10 @@ export function serializeHeader(header: MemoryHeader): string {
 }
 
 export function stripHeader(content: string): string {
-  const parts = content.split("---");
-  if (parts.length >= 3) {
-    return parts.slice(2).join("---").trim();
-  }
-  return content.trim();
+  const lines = content.split("\n");
+  const bounds = findRecallHeaderBounds(lines);
+  if (!bounds) return content.trim();
+  return lines.slice(bounds.close + 1).join("\n").trim();
 }
 
 export function replaceHeader(content: string, newHeader: MemoryHeader): string {

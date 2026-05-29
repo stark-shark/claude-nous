@@ -23363,9 +23363,28 @@ function isValidIsoDate(s) {
   if (Number.isNaN(d.getTime())) return false;
   return d.toISOString().slice(0, 10) === s;
 }
+function findRecallHeaderBounds(lines) {
+  let i = 0;
+  while (i < lines.length) {
+    while (i < lines.length && lines[i].trim() !== "---") i++;
+    if (i >= lines.length) return null;
+    const open = i;
+    i++;
+    let containsT = false;
+    while (i < lines.length && lines[i].trim() !== "---") {
+      if (lines[i].trim().startsWith("T:")) containsT = true;
+      i++;
+    }
+    if (i >= lines.length) return null;
+    if (containsT) return { open, close: i };
+    i++;
+  }
+  return null;
+}
 function parseHeader(content) {
   const lines = content.split("\n");
-  let inHeader = false;
+  const bounds = findRecallHeaderBounds(lines);
+  if (!bounds) return null;
   let type;
   let name;
   let description;
@@ -23373,17 +23392,8 @@ function parseHeader(content) {
   let updated;
   let accessCount;
   let links;
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed === "---") {
-      if (!inHeader) {
-        inHeader = true;
-        continue;
-      } else {
-        break;
-      }
-    }
-    if (!inHeader) continue;
+  for (let i = bounds.open + 1; i < bounds.close; i++) {
+    const trimmed = lines[i].trim();
     if (trimmed.startsWith("T:")) {
       const parts = trimmed.slice(2).split("|", 2);
       type = parts[0].trim();
@@ -23432,11 +23442,10 @@ function serializeHeader(header) {
   return lines.join("\n");
 }
 function stripHeader(content) {
-  const parts = content.split("---");
-  if (parts.length >= 3) {
-    return parts.slice(2).join("---").trim();
-  }
-  return content.trim();
+  const lines = content.split("\n");
+  const bounds = findRecallHeaderBounds(lines);
+  if (!bounds) return content.trim();
+  return lines.slice(bounds.close + 1).join("\n").trim();
 }
 
 // src/lib/validator.ts
@@ -24539,7 +24548,7 @@ ${mem.content}
 }
 
 // src/index.ts
-var VERSION = true ? "0.4.0" : "0.0.0-dev";
+var VERSION = true ? "0.4.1" : "0.0.0-dev";
 var SERVER_DIR = path12.join(os2.homedir(), ".claude", "recall");
 var CONFIG_PATH = path12.join(SERVER_DIR, "recall.config.jsonc");
 var config2 = loadConfig(CONFIG_PATH);
