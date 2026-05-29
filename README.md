@@ -29,63 +29,64 @@ The plugin ships with:
 
 ## Installation
 
-### Prerequisites
+Prerequisite: Node.js 20+ on PATH (Claude Code launches the MCP server with it; the bundled `dist/index.js` has no other runtime dependencies).
 
-- Node.js 20+ (only needed to run the MCP server; no build required)
-- Claude Code
+Run these three slash commands in Claude Code:
 
-### Install from GitHub (recommended)
-
-Add to your Claude Code settings (`~/.claude/settings.json`):
-
-```json
-{
-  "extraKnownMarketplaces": {
-    "recall": {
-      "source": {
-        "source": "github",
-        "repo": "stark-shark/claude-recall"
-      }
-    }
-  },
-  "enabledPlugins": {
-    "recall@recall": true
-  }
-}
+```
+/plugin marketplace add stark-shark/claude-recall
+/plugin install recall@recall
+/reload-plugins
 ```
 
-Restart Claude Code. That's it — the plugin self-registers its MCP server and SessionStart hook. Verify with `/plugin` (Recall should show enabled) and `/mcp` (the recall server should show connected). The pre-built `dist/` ships with the repo, so no `npm install` or build step is needed.
+That's it. The plugin self-registers its MCP server and SessionStart hook — no `~/.claude/settings.json` editing, no `.mcp.json` editing, no `npm install` or build step on your end (the bundled `dist/` ships with the repo).
 
-If you previously added a manual `recall` entry under `mcpServers` in your `~/.claude/settings.json` or any project's `.mcp.json`, remove it — the plugin registers itself now and a duplicate will conflict.
+Verify with `/plugin` (Recall should show enabled), `/mcp` (the recall server should show connected), and `/recall-help` (renders the in-plugin help — see [`/recall-help`](#recall-help) below).
+
+### Upgrade
+
+```
+/plugin marketplace update recall
+/plugin install recall@recall
+/reload-plugins
+```
+
+### Uninstall
+
+```
+/plugin uninstall recall@recall
+```
+
+Memories are **not touched** — they live at `~/.claude/projects/<project-hash>/memory/` and the plugin never owns that directory. A `RECALL_NOTATION.md` cheatsheet sits alongside the memories so you can decode them by hand even with no plugin installed.
+
+To also forget the marketplace source (full wipe):
+
+```
+/plugin marketplace remove recall
+```
+
+### `/recall-help`
+
+Once installed, type `/recall-help` in Claude Code for an in-session overview — all 8 tools, the symbol cheatsheet, the memory file format, install/upgrade/uninstall commands, and links to the deeper docs. Useful when you forget the notation or want to remind yourself what `recall_check --links` does without leaving the editor.
 
 ### Install from local clone (for development)
 
 If you want to modify the plugin:
 
 ```bash
-cd ~/.claude
-git clone https://github.com/stark-shark/claude-recall.git recall
-cd recall
+git clone https://github.com/stark-shark/claude-recall.git
+cd claude-recall
 npm install
-npm run build
+npm run build      # esbuild bundle → dist/index.js
 ```
 
-Point `extraKnownMarketplaces` at the local directory instead of GitHub:
+Then point the marketplace at the local directory instead of GitHub:
 
-```json
-{
-  "extraKnownMarketplaces": {
-    "recall": {
-      "source": {
-        "source": "directory",
-        "path": "<USER_HOME>/.claude/recall"
-      }
-    }
-  }
-}
 ```
-
-Replace `<USER_HOME>` with your home dir (e.g., `C:/Users/YourName` on Windows, `/Users/yourname` on macOS). No `.mcp.json` editing required — the plugin's bundled `.mcp.json` handles MCP server registration.
+/plugin marketplace add <absolute-path-to-claude-recall>
+/plugin install recall@recall
+/reload-plugins
+```
 
 ## Configuration
 
@@ -131,7 +132,7 @@ L:<linked memories>     # optional, comma-separated filenames
 | `::` | because | `:: cost too high` |
 | `(+)` | apply when | `(+) new FK to $emp` |
 | `!` | not / without | `!httpOnly on auth cookies` |
-| `=` | equals | `sonnet=$0.07/chat` |
+| `=` | equals | `node=v20` |
 | `!=` | is not | `public schema !=app data` |
 | `&` | and | `auth & session mgmt` |
 | `\|` | or / separator | `T:fb \| name` |
@@ -160,11 +161,14 @@ Recall never moves memories — it just reads and writes to the existing locatio
 ## Development
 
 ```bash
-npm run dev        # tsc --watch
+npm run build      # esbuild bundle → dist/index.js (single self-contained file)
+npm run typecheck  # tsc --noEmit
+npm run dev        # tsc --watch (source-level type checking; does not produce a runnable bundle)
 npm test           # vitest run
-npm run test:watch # vitest
-npm run build      # tsc → dist/
+npm run test:watch # vitest watch mode
 ```
+
+The MCP server entry is `src/index.ts`. The bundle is stamped with the version from `package.json` at build time via `scripts/build.mjs` — bump the version in `package.json`, `.claude-plugin/plugin.json`, and `.claude-plugin/marketplace.json` together, run `npm run build`, commit. New slash commands go in `commands/<name>.md` and are picked up automatically.
 
 ## License
 

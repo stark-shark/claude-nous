@@ -1,6 +1,6 @@
 {
   "name": "recall-mcp",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Recall — MCP server for compressed memory notation in Claude Code",
   "type": "module",
   "main": "dist/index.js",

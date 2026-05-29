@@ -23688,7 +23688,7 @@ memories yourself, even without the plugin installed.
 | \`::\`   | because             | \`:: cost too high\`                |
 | \`(+)\`  | apply when          | \`(+) new FK to $emp\`              |
 | \`!\`    | not / without       | \`!httpOnly on auth cookies\`       |
-| \`=\`    | equals              | \`sonnet=$0.07/chat\`               |
+| \`=\`    | equals              | \`node=v20\`                        |
 | \`!=\`   | is not              | \`public schema != app data\`       |
 | \`&\`    | and                 | \`auth & session mgmt\`             |
 | \`\\|\`    | or / separator      | \`T:fb \\| name\`                     |
@@ -24539,7 +24539,7 @@ ${mem.content}
 }
 
 // src/index.ts
-var VERSION = true ? "0.3.1" : "0.0.0-dev";
+var VERSION = true ? "0.3.2" : "0.0.0-dev";
 var SERVER_DIR = path12.join(os2.homedir(), ".claude", "recall");
 var CONFIG_PATH = path12.join(SERVER_DIR, "recall.config.jsonc");
 var config2 = loadConfig(CONFIG_PATH);

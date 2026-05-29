@@ -43,7 +43,7 @@ All tool calls should be wrapped in `TaskCreate` / `TaskUpdate` for clean progre
 | `::` | because | `:: cost too high` |
 | `(+)` | apply when | `(+) new FK to $emp` |
 | `!` | not / without | `!httpOnly on auth cookies` |
-| `=` | equals | `sonnet=$0.07/chat` |
+| `=` | equals | `node=v20` |
 | `!=` | is not | `public schema != app data` |
 | `&` | and | `auth & session mgmt` |
 | `\|` | or / separator | `T:fb \| name` |
