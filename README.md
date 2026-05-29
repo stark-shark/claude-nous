@@ -105,22 +105,33 @@ Key settings:
 - `headerFields.*` — toggle auto-populated fields (dates, access count, links)
 - `healthChecks.*` — thresholds for staleness and compression ratio
 
-## Memory Format
+## Memory Format (v0.5.0+)
 
-Memories are markdown files with a required header:
+Memories are markdown files with a YAML frontmatter header in Claude Code's native auto-memory format. Recall data lives under `metadata.recall.*`:
 
-```
+```yaml
 ---
-T:<type>      # fb, proj, ref, usr
-D:<one-line description>
-C:<created date>        # optional, set once
-U:<updated date>        # optional, updated on save
-A:<access count>        # optional, incremented on load
-L:<linked memories>     # optional, comma-separated filenames
+name: my-memory-slug
+description: "one-line summary"
+metadata:
+  node_type: memory
+  type: fb                          # fb, proj, ref, usr
+  recall:
+    humanName: "Human Readable"     # optional — used when display name differs from slug
+    created: 2026-05-29
+    updated: 2026-05-29
+    accessCount: 0
+    links:
+      - linked_a
+      - linked_b
 ---
 
 <body content using Recall notation>
 ```
+
+This format lets Claude Code's native auto-memory system and Recall co-exist on the same files. Claude Code touches `name`, `description`, and `metadata.type`; Recall owns `metadata.recall.*`. Neither overwrites the other.
+
+**Legacy format compatibility:** older files using a `T:<type> | <name>` / `D:` / `C:` / `U:` / `A:` / `L:` header still parse. New saves rewrite them to the format above — no manual migration required.
 
 ## Recall Notation
 

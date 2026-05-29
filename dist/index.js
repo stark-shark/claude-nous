@@ -23363,8 +23363,20 @@ function isValidIsoDate(s) {
   if (Number.isNaN(d.getTime())) return false;
   return d.toISOString().slice(0, 10) === s;
 }
-function findRecallHeaderBounds(lines) {
+function findFirstFrontmatterBlock(lines) {
   let i = 0;
+  while (i < lines.length && lines[i].trim() === "") i++;
+  if (i >= lines.length || lines[i].trim() !== "---") return null;
+  const open = i;
+  for (let j = i + 1; j < lines.length; j++) {
+    if (lines[j].trim() === "---") {
+      return { open, close: j, bodyStart: j + 1 };
+    }
+  }
+  return null;
+}
+function findLegacyHeaderBlock(lines, startLine = 0) {
+  let i = startLine;
   while (i < lines.length) {
     while (i < lines.length && lines[i].trim() !== "---") i++;
     if (i >= lines.length) return null;
@@ -23376,15 +23388,110 @@ function findRecallHeaderBounds(lines) {
       i++;
     }
     if (i >= lines.length) return null;
-    if (containsT) return { open, close: i };
+    if (containsT) return { open, close: i, bodyStart: i + 1 };
     i++;
   }
   return null;
 }
-function parseHeader(content) {
-  const lines = content.split("\n");
-  const bounds = findRecallHeaderBounds(lines);
-  if (!bounds) return null;
+function parseYamlScalar(raw) {
+  const t = raw.trim();
+  if (t === "") return "";
+  if (t.startsWith('"') && t.endsWith('"') || t.startsWith("'") && t.endsWith("'")) {
+    return t.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+  }
+  if (/^-?\d+$/.test(t)) return parseInt(t, 10);
+  if (/^-?\d+\.\d+$/.test(t)) return parseFloat(t);
+  if (t === "true") return true;
+  if (t === "false") return false;
+  if (t === "null" || t === "~") return null;
+  return t;
+}
+function indentOf(line) {
+  let n = 0;
+  while (n < line.length && line[n] === " ") n++;
+  return n;
+}
+function parseYamlBlock(lines) {
+  const root = {};
+  const stack = [
+    { obj: root, indent: -1 }
+  ];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim() === "" || line.trim().startsWith("#")) continue;
+    const indent = indentOf(line);
+    const rest = line.slice(indent);
+    while (stack.length > 1 && indent <= stack[stack.length - 1].indent) {
+      stack.pop();
+    }
+    const top = stack[stack.length - 1];
+    const current = top.obj;
+    if (rest.startsWith("- ")) {
+      const value = parseYamlScalar(rest.slice(2));
+      if (Array.isArray(current)) {
+        current.push(value);
+      }
+      continue;
+    }
+    const colonIdx = rest.indexOf(":");
+    if (colonIdx === -1) continue;
+    const key = rest.slice(0, colonIdx).trim();
+    const after = rest.slice(colonIdx + 1).trim();
+    if (after === "") {
+      let nextIdx = i + 1;
+      while (nextIdx < lines.length && lines[nextIdx].trim() === "") nextIdx++;
+      const childIsList = nextIdx < lines.length && indentOf(lines[nextIdx]) > indent && lines[nextIdx].slice(indentOf(lines[nextIdx])).startsWith("- ");
+      if (Array.isArray(current)) continue;
+      if (childIsList) {
+        const arr = [];
+        current[key] = arr;
+        stack.push({ obj: arr, indent });
+      } else {
+        const obj = {};
+        current[key] = obj;
+        stack.push({ obj, indent });
+      }
+    } else {
+      if (Array.isArray(current)) continue;
+      current[key] = parseYamlScalar(after);
+    }
+  }
+  return root;
+}
+function parseNewFormat(lines, block) {
+  const yamlLines = lines.slice(block.open + 1, block.close);
+  const data = parseYamlBlock(yamlLines);
+  const metadata = data.metadata;
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const meta3 = metadata;
+  const typeRaw = meta3.type;
+  if (typeof typeRaw !== "string") return null;
+  if (!VALID_TYPES.includes(typeRaw)) return null;
+  const type = typeRaw;
+  const recallRaw = meta3.recall;
+  const recall = recallRaw && typeof recallRaw === "object" && !Array.isArray(recallRaw) ? recallRaw : {};
+  const nameSlug = typeof data.name === "string" ? data.name : "";
+  const humanName = typeof recall.humanName === "string" ? recall.humanName : "";
+  const description = typeof data.description === "string" ? data.description : "";
+  const name = humanName || nameSlug;
+  if (!name || !description) return null;
+  const header = { type, name, description };
+  if (typeof recall.created === "string" && isValidIsoDate(recall.created)) {
+    header.created = recall.created;
+  }
+  if (typeof recall.updated === "string" && isValidIsoDate(recall.updated)) {
+    header.updated = recall.updated;
+  }
+  if (typeof recall.accessCount === "number" && recall.accessCount >= 0) {
+    header.accessCount = recall.accessCount;
+  }
+  if (Array.isArray(recall.links)) {
+    const links = recall.links.filter((l) => typeof l === "string" && l.length > 0);
+    if (links.length > 0) header.links = links;
+  }
+  return header;
+}
+function parseLegacyFormat(lines, block) {
   let type;
   let name;
   let description;
@@ -23392,7 +23499,7 @@ function parseHeader(content) {
   let updated;
   let accessCount;
   let links;
-  for (let i = bounds.open + 1; i < bounds.close; i++) {
+  for (let i = block.open + 1; i < block.close; i++) {
     const trimmed = lines[i].trim();
     if (trimmed.startsWith("T:")) {
       const parts = trimmed.slice(2).split("|", 2);
@@ -23408,44 +23515,109 @@ function parseHeader(content) {
       if (isValidIsoDate(raw)) updated = raw;
     } else if (trimmed.startsWith("A:")) {
       const raw = trimmed.slice(2).trim();
-      if (/^\d+$/.test(raw)) {
-        accessCount = parseInt(raw, 10);
-      }
+      if (/^\d+$/.test(raw)) accessCount = parseInt(raw, 10);
     } else if (trimmed.startsWith("L:")) {
       links = trimmed.slice(2).split(",").map((s) => s.trim()).filter(Boolean);
     }
   }
   if (!type || !name || !description) return null;
   if (!VALID_TYPES.includes(type)) return null;
-  const header = {
-    type,
-    name,
-    description
-  };
+  const header = { type, name, description };
   if (created !== void 0) header.created = created;
   if (updated !== void 0) header.updated = updated;
   if (accessCount !== void 0) header.accessCount = accessCount;
   if (links !== void 0) header.links = links;
   return header;
 }
+function parseHeader(content) {
+  const lines = content.split("\n");
+  const firstBlock = findFirstFrontmatterBlock(lines);
+  if (firstBlock) {
+    const newHeader = parseNewFormat(lines, firstBlock);
+    if (newHeader) {
+      const hasEnrichedData = newHeader.created !== void 0 || newHeader.updated !== void 0 || newHeader.accessCount !== void 0 || newHeader.links !== void 0;
+      if (!hasEnrichedData) {
+        const legacy2 = findLegacyHeaderBlock(lines, firstBlock.bodyStart);
+        if (legacy2) {
+          const legacyHeader = parseLegacyFormat(lines, legacy2);
+          if (legacyHeader) {
+            if (legacyHeader.created !== void 0) newHeader.created = legacyHeader.created;
+            if (legacyHeader.updated !== void 0) newHeader.updated = legacyHeader.updated;
+            if (legacyHeader.accessCount !== void 0) newHeader.accessCount = legacyHeader.accessCount;
+            if (legacyHeader.links !== void 0) newHeader.links = legacyHeader.links;
+          }
+        }
+      }
+      return newHeader;
+    }
+  }
+  const legacy = findLegacyHeaderBlock(lines);
+  if (legacy) {
+    return parseLegacyFormat(lines, legacy);
+  }
+  return null;
+}
+function slugify2(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+function quoteForYaml(s) {
+  return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
 function serializeHeader(header) {
+  const slug = slugify2(header.name);
+  const needsHumanName = header.name !== slug;
   const lines = ["---"];
-  lines.push(`T:${header.type} | ${header.name}`);
-  lines.push(`D:${header.description}`);
-  if (header.created !== void 0) lines.push(`C:${header.created}`);
-  if (header.updated !== void 0) lines.push(`U:${header.updated}`);
-  if (header.accessCount !== void 0) lines.push(`A:${header.accessCount}`);
+  lines.push(`name: ${slug}`);
+  lines.push(`description: ${quoteForYaml(header.description)}`);
+  lines.push("metadata:");
+  lines.push("  node_type: memory");
+  lines.push(`  type: ${header.type}`);
+  lines.push("  recall:");
+  if (needsHumanName) {
+    lines.push(`    humanName: ${quoteForYaml(header.name)}`);
+  }
+  if (header.created !== void 0) {
+    lines.push(`    created: ${header.created}`);
+  }
+  if (header.updated !== void 0) {
+    lines.push(`    updated: ${header.updated}`);
+  }
+  if (header.accessCount !== void 0) {
+    lines.push(`    accessCount: ${header.accessCount}`);
+  }
   if (header.links !== void 0 && header.links.length > 0) {
-    lines.push(`L:${header.links.join(", ")}`);
+    lines.push("    links:");
+    for (const link of header.links) {
+      lines.push(`      - ${link}`);
+    }
   }
   lines.push("---");
   return lines.join("\n");
 }
 function stripHeader(content) {
   const lines = content.split("\n");
-  const bounds = findRecallHeaderBounds(lines);
-  if (!bounds) return content.trim();
-  return lines.slice(bounds.close + 1).join("\n").trim();
+  const firstBlock = findFirstFrontmatterBlock(lines);
+  if (firstBlock && parseNewFormat(lines, firstBlock)) {
+    const trailingLegacy = findLegacyHeaderBlock(lines, firstBlock.bodyStart);
+    if (trailingLegacy) {
+      let onlyBlank = true;
+      for (let i = firstBlock.bodyStart; i < trailingLegacy.open; i++) {
+        if (lines[i].trim() !== "") {
+          onlyBlank = false;
+          break;
+        }
+      }
+      if (onlyBlank) {
+        return lines.slice(trailingLegacy.bodyStart).join("\n").trim();
+      }
+    }
+    return lines.slice(firstBlock.bodyStart).join("\n").trim();
+  }
+  const legacy = findLegacyHeaderBlock(lines);
+  if (legacy) {
+    return lines.slice(legacy.bodyStart).join("\n").trim();
+  }
+  return content.trim();
 }
 
 // src/lib/validator.ts
@@ -23711,22 +23883,31 @@ memories yourself, even without the plugin installed.
 Shortcodes like \`$hub\`, \`$ac\`, \`$sb\` are defined in [\`REGISTRY.md\`](REGISTRY.md)
 in this same directory. Look there to see what each one expands to.
 
-## Memory File Header
+## Memory File Header (v0.5.0+)
 
-Every memory begins with a YAML-style header:
+Every memory begins with a YAML frontmatter block in Claude Code's native auto-memory format, with Recall-specific data nested under \`metadata.recall\`:
 
-\`\`\`
+\`\`\`yaml
 ---
-T:<type>       # fb (feedback), proj (project), ref (reference), usr (user)
-D:<one-line description>
-C:<created date>          # YYYY-MM-DD (optional, set once)
-U:<updated date>          # YYYY-MM-DD (optional, set on save)
-A:<access count>          # incremented when memory is loaded
-L:<linked memories>       # comma-separated filenames (no .md)
+name: my-memory-slug              # kebab-case identifier
+description: "one-line summary"
+metadata:
+  node_type: memory
+  type: fb                        # fb (feedback), proj (project), ref (reference), usr (user)
+  recall:
+    humanName: "Human Readable Name"   # optional \u2014 only when it differs from the slug
+    created: 2026-05-29                # YYYY-MM-DD (set once)
+    updated: 2026-05-29                # YYYY-MM-DD (updated on save)
+    accessCount: 0                     # incremented on each recall_load
+    links:
+      - linked_memory_a                # filenames without .md
+      - linked_memory_b
 ---
 
 <body in Recall notation>
 \`\`\`
+
+**Older files** (pre-v0.5.0) may use a legacy header with \`T:<type> | <name>\`, \`D:\`, \`C:\`, \`U:\`, \`A:\`, \`L:\` lines between two \`---\` markers. Recall reads both formats. New saves always use the newer format above.
 
 ## Index
 
@@ -24548,7 +24729,7 @@ ${mem.content}
 }
 
 // src/index.ts
-var VERSION = true ? "0.4.1" : "0.0.0-dev";
+var VERSION = true ? "0.5.0" : "0.0.0-dev";
 var SERVER_DIR = path12.join(os2.homedir(), ".claude", "recall");
 var CONFIG_PATH = path12.join(SERVER_DIR, "recall.config.jsonc");
 var config2 = loadConfig(CONFIG_PATH);

@@ -73,20 +73,29 @@ A copy of this cheatsheet is also written to `~/.claude/projects/<project-hash>/
 
 ---
 
-## Memory File Format
+## Memory File Format (v0.5.0+)
 
-```
+```yaml
 ---
-T:<type>      # fb (feedback), proj (project), ref (reference), usr (user)
-D:<one-line description>
-C:<created date>        # optional
-U:<updated date>        # optional, set on save
-A:<access count>        # optional, incremented on load
-L:<linked memories>     # optional, comma-separated filenames
+name: my-memory-slug
+description: "one-line summary"
+metadata:
+  node_type: memory
+  type: fb                         # fb (feedback), proj (project), ref (reference), usr (user)
+  recall:
+    humanName: "Human Readable"    # optional, when display name differs from slug
+    created: 2026-05-29
+    updated: 2026-05-29
+    accessCount: 0
+    links:
+      - linked_a
+      - linked_b
 ---
 
 <body in Recall notation>
 ```
+
+Recall stores its metadata under `metadata.recall.*` so Claude Code's native auto-memory system and Recall co-exist on the same files without overwriting each other. Older files using the legacy `T:`/`D:` format still parse — new saves upgrade them automatically.
 
 ---
 

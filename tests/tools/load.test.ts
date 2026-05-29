@@ -30,7 +30,7 @@ describe("handleLoad", () => {
   it("increments access count", () => {
     handleLoad({ name: "FK CASCADE" }, [{ projectHash: "proj", memoryDir: memDir }], DEFAULT_CONFIG);
     const updated = fs.readFileSync(path.join(memDir, "feedback_fk_cascade.md"), "utf-8");
-    expect(updated).toContain("A:6");
+    expect(updated).toContain("accessCount: 6");
   });
 
   it("returns error for nonexistent", () => {

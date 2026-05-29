@@ -32,22 +32,31 @@ memories yourself, even without the plugin installed.
 Shortcodes like \`$hub\`, \`$ac\`, \`$sb\` are defined in [\`REGISTRY.md\`](REGISTRY.md)
 in this same directory. Look there to see what each one expands to.
 
-## Memory File Header
+## Memory File Header (v0.5.0+)
 
-Every memory begins with a YAML-style header:
+Every memory begins with a YAML frontmatter block in Claude Code's native auto-memory format, with Recall-specific data nested under \`metadata.recall\`:
 
-\`\`\`
+\`\`\`yaml
 ---
-T:<type>       # fb (feedback), proj (project), ref (reference), usr (user)
-D:<one-line description>
-C:<created date>          # YYYY-MM-DD (optional, set once)
-U:<updated date>          # YYYY-MM-DD (optional, set on save)
-A:<access count>          # incremented when memory is loaded
-L:<linked memories>       # comma-separated filenames (no .md)
+name: my-memory-slug              # kebab-case identifier
+description: "one-line summary"
+metadata:
+  node_type: memory
+  type: fb                        # fb (feedback), proj (project), ref (reference), usr (user)
+  recall:
+    humanName: "Human Readable Name"   # optional — only when it differs from the slug
+    created: 2026-05-29                # YYYY-MM-DD (set once)
+    updated: 2026-05-29                # YYYY-MM-DD (updated on save)
+    accessCount: 0                     # incremented on each recall_load
+    links:
+      - linked_memory_a                # filenames without .md
+      - linked_memory_b
 ---
 
 <body in Recall notation>
 \`\`\`
+
+**Older files** (pre-v0.5.0) may use a legacy header with \`T:<type> | <name>\`, \`D:\`, \`C:\`, \`U:\`, \`A:\`, \`L:\` lines between two \`---\` markers. Recall reads both formats. New saves always use the newer format above.
 
 ## Index
 

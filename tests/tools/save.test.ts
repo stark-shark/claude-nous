@@ -19,8 +19,10 @@ describe("handleSave", () => {
     const result = handleSave({ name: "FK CASCADE", type: "fb", description: "desc", content: "rule: FK\n:: reason\n(+) trigger" }, tmpDir, DEFAULT_CONFIG);
     expect(result.isError).toBeFalsy();
     const written = fs.readFileSync(path.join(tmpDir, "feedback_fk_cascade.md"), "utf-8");
-    expect(written).toContain("T:fb | FK CASCADE");
-    expect(written).toContain("A:0");
+    expect(written).toContain("name: fk-cascade");
+    expect(written).toContain('humanName: "FK CASCADE"');
+    expect(written).toContain("type: fb");
+    expect(written).toContain("accessCount: 0");
   });
 
   it("rejects duplicate", () => {
