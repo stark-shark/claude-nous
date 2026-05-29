@@ -1,11 +1,11 @@
 {
   "name": "recall-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Recall — MCP server for compressed memory notation in Claude Code",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --banner:js=\"import { createRequire as ___createRequire } from 'module'; const require = ___createRequire(import.meta.url);\"",
+    "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
     "dev": "tsc --watch",
     "start": "node dist/index.js",

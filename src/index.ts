@@ -4,6 +4,12 @@ import * as z from "zod/v4";
 import * as path from "node:path";
 import * as os from "node:os";
 
+// Injected at build time by scripts/build.mjs from package.json. Fallback to
+// "0.0.0-dev" when running unbundled source (e.g. tests, `tsc --watch`).
+declare const __RECALL_VERSION__: string;
+const VERSION: string =
+  typeof __RECALL_VERSION__ === "string" ? __RECALL_VERSION__ : "0.0.0-dev";
+
 import { loadConfig } from "./lib/config.js";
 import {
   getCurrentProjectHash,
@@ -24,7 +30,7 @@ const CONFIG_PATH = path.join(SERVER_DIR, "recall.config.jsonc");
 const config = loadConfig(CONFIG_PATH);
 
 const server = new McpServer(
-  { name: "recall", version: "0.1.0" },
+  { name: "recall", version: VERSION },
   {
     capabilities: { logging: {} },
     instructions: [

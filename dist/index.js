@@ -24539,11 +24539,12 @@ ${mem.content}
 }
 
 // src/index.ts
+var VERSION = true ? "0.3.1" : "0.0.0-dev";
 var SERVER_DIR = path12.join(os2.homedir(), ".claude", "recall");
 var CONFIG_PATH = path12.join(SERVER_DIR, "recall.config.jsonc");
 var config2 = loadConfig(CONFIG_PATH);
 var server = new McpServer(
-  { name: "recall", version: "0.1.0" },
+  { name: "recall", version: VERSION },
   {
     capabilities: { logging: {} },
     instructions: [
