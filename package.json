@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "version": "node scripts/sync-version.mjs && git add .claude-plugin",
+    "version": "node scripts/sync-version.mjs && npm run build && git add .claude-plugin dist",
     "typecheck": "tsc --noEmit",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
