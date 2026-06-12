@@ -37,7 +37,13 @@ export const DEFAULT_CONFIG: RecallConfig = {
 };
 
 function stripJsoncComments(text: string): string {
-  return text.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  // Strip a UTF-8 BOM first — Windows editors and PowerShell 5.1's
+  // `-Encoding utf8` write one, and JSON.parse rejects it. A BOM here
+  // silently reverted the whole config to defaults.
+  return text
+    .replace(new RegExp("^\\uFEFF"), "")
+    .replace(/\/\/.*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
 export function loadConfig(configPath: string): RecallConfig {

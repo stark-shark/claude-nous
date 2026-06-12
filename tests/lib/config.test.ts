@@ -34,4 +34,11 @@ describe("loadConfig", () => {
     const config = loadConfig(configPath);
     expect(config.maintainIndex).toBe(false);
   });
+
+  it("tolerates a UTF-8 BOM (PowerShell 5.1 -Encoding utf8 writes one)", () => {
+    const configPath = path.join(tmpDir, "recall.config.jsonc");
+    fs.writeFileSync(configPath, "\u{FEFF}" + '{\n  // comment\n  "indexMaxLines": 400\n}');
+    const config = loadConfig(configPath);
+    expect(config.indexMaxLines).toBe(400);
+  });
 });
