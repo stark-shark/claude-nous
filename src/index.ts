@@ -15,6 +15,8 @@ import {
   getCurrentProjectHash,
   ensureMemoryDir,
   discoverAllMemoryDirs,
+  ensureGlobalMemoryDir,
+  type MemoryDirEntry,
 } from "./lib/memory-dir.js";
 import { handleSave } from "./tools/save.js";
 import { handleLoad } from "./tools/load.js";
@@ -24,10 +26,27 @@ import { handleDecode } from "./tools/decode.js";
 import { handleRegistry } from "./tools/registry.js";
 import { handleExport } from "./tools/export.js";
 import { handleImport } from "./tools/import.js";
+import { searchSessions } from "./lib/sessions.js";
+import { runScan, formatReport } from "./lib/curate.js";
 
 const SERVER_DIR = path.join(os.homedir(), ".claude", "recall");
 const CONFIG_PATH = path.join(SERVER_DIR, "recall.config.jsonc");
 const config = loadConfig(CONFIG_PATH);
+
+// The user profile is scoped to the USER, not a project: store + load it from a
+// global memory dir shared across every project.
+const GLOBAL_MEMORY_DIR = ensureGlobalMemoryDir();
+config.userMemory.dir = GLOBAL_MEMORY_DIR;
+
+// Memory dirs for read ops = all project dirs + the global dir (so the user
+// profile and any other global memory is searchable / loadable / checkable).
+function readDirs(): MemoryDirEntry[] {
+  const dirs = discoverAllMemoryDirs(getProjectsRoot());
+  if (!dirs.some((d) => d.memoryDir === GLOBAL_MEMORY_DIR)) {
+    dirs.push({ projectHash: "global", memoryDir: GLOBAL_MEMORY_DIR });
+  }
+  return dirs;
+}
 
 const server = new McpServer(
   { name: "recall", version: VERSION },
@@ -65,7 +84,9 @@ server.registerTool(
   {
     title: "Save Memory",
     description:
-      "Write or update a memory file with Recall notation enforcement, dedup check, and index update.",
+      "Write or update a memory file with Recall notation enforcement, dedup check, and index update. " +
+      "Enforces a hard character cap on the body: a save over cap returns a 'Cap exceeded' error and writes nothing — consolidate or split, then retry THIS turn. " +
+      "A usr-type memory named 'user' or 'profile' is routed to the always-loaded user.md profile. Content is security-scanned before write.",
     inputSchema: z.object({
       name: z.string().describe("Memory name (e.g. 'FK CASCADE')"),
       type: z.enum(["fb", "proj", "ref", "usr"]).describe("Memory type"),
@@ -101,7 +122,7 @@ server.registerTool(
     }),
   },
   async ({ name, file, expanded }) => {
-    const memoryDirs = discoverAllMemoryDirs(getProjectsRoot());
+    const memoryDirs = readDirs();
     const result = handleLoad({ name, file, expanded }, memoryDirs, config);
 
     return {
@@ -118,15 +139,22 @@ server.registerTool(
   {
     title: "Search Memories",
     description:
-      "Query memories across all projects by keyword, type, or project. Returns headers only, not full content.",
+      "Query memories (hot tier, headers only) OR past Claude Code session transcripts (cold tier, full text). " +
+      "scope='memories' (default) searches distilled memory files; scope='sessions' searches raw conversation history — use it for 'did we discuss X?' recall that was never saved as a memory.",
     inputSchema: z.object({
-      query: z.string().describe("Search keyword"),
-      type: z.enum(["fb", "proj", "ref", "usr"]).optional().describe("Filter by memory type"),
+      query: z.string().describe("Search keyword(s); multiple words are ANDed for session scope"),
+      type: z.enum(["fb", "proj", "ref", "usr"]).optional().describe("Filter by memory type (memories scope)"),
       project: z.string().optional().describe("Filter by project hash"),
+      scope: z.enum(["memories", "sessions"]).optional().describe("Where to search (default: memories)"),
+      limit: z.number().optional().describe("Max session matches to return (sessions scope; default 20)"),
     }),
   },
-  async ({ query, type, project }) => {
-    const memoryDirs = discoverAllMemoryDirs(getProjectsRoot());
+  async ({ query, type, project, scope, limit }) => {
+    if (scope === "sessions") {
+      const result = searchSessions(getProjectsRoot(), { query, project, limit });
+      return { content: [{ type: "text" as const, text: result.text }] };
+    }
+    const memoryDirs = readDirs();
     const result = handleSearch({ query, type, project }, memoryDirs);
 
     return {
@@ -145,12 +173,12 @@ server.registerTool(
       "Run health checks: staleness, registry drift, compression, links, duplicates, stats.",
     inputSchema: z.object({
       checks: z
-        .array(z.enum(["stale", "registry", "compression", "links", "duplicates", "stats", "all"]))
+        .array(z.enum(["stale", "registry", "compression", "links", "duplicates", "stats", "lifecycle", "caps", "all"]))
         .describe("Which checks to run"),
     }),
   },
   async ({ checks }) => {
-    const memoryDirs = discoverAllMemoryDirs(getProjectsRoot());
+    const memoryDirs = readDirs();
     const result = handleCheck({ checks }, memoryDirs, config);
 
     return {
@@ -173,7 +201,7 @@ server.registerTool(
     }),
   },
   async ({ name, file, all }) => {
-    const memoryDirs = discoverAllMemoryDirs(getProjectsRoot());
+    const memoryDirs = readDirs();
     const result = handleDecode({ name, file, all }, memoryDirs);
 
     return {
@@ -221,7 +249,7 @@ server.registerTool(
     }),
   },
   async ({ outputPath, project }) => {
-    const memoryDirs = discoverAllMemoryDirs(getProjectsRoot());
+    const memoryDirs = readDirs();
     const result = handleExport({ outputPath, project }, memoryDirs, config.registryFile);
 
     return {
@@ -256,7 +284,27 @@ server.registerTool(
 
 // ─── Start ─────────────────────────────────────────────────────
 
+// CLI: `node dist/index.js --scan` runs the auto-apply curation scan and prints
+// a one-block report. Invoked by the SessionStart hook; exits without starting
+// the MCP server.
+function runScanCli(): void {
+  if (!config.scan.enabled) {
+    process.stdout.write("Recall scan: disabled in config.\n");
+    return;
+  }
+  // Scope auto-apply to the CURRENT project only — never silently mutate other
+  // projects' memories. cwd is the project dir when invoked from the hook.
+  const hash = getCurrentProjectHash();
+  const memDir = ensureMemoryDir(hash, getProjectsRoot());
+  const report = runScan([{ projectHash: hash, memoryDir: memDir }], config);
+  process.stdout.write(formatReport(report) + "\n");
+}
+
 async function main() {
+  if (process.argv.includes("--scan")) {
+    runScanCli();
+    return;
+  }
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("Recall MCP server running on stdio");

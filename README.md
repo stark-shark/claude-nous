@@ -12,7 +12,21 @@ The plugin ships with:
 
 - **MCP server** — 8 tools for memory operations
 - **Skill** — governs how Claude uses the tools (task display, multi-topic retrieval)
-- **SessionStart hook** — auto-injects the skill at every session start
+- **SessionStart hook** — auto-injects the skill, the always-loaded user profile, and a curation scan at every session start
+
+### Hermes-style memory (v0.6–0.7)
+
+Recall borrows the mechanisms that make Nous Research's Hermes memory feel like it "grows with you", layered on top of Recall's compression notation (so a cap holds far more than the same cap of raw prose):
+
+- **Hard caps + overflow loop** — each memory body has a character cap (`caps.*`). A save over cap returns a `Cap exceeded` error and writes nothing; the model must consolidate or split, then retry. No auto-truncation, no silent bloat.
+- **Always-loaded global `user.md`** — a `usr`-type memory named `user`/`profile` is stored once at `~/.claude/recall/memory/` (scoped to the user, shared across projects) and injected into context at every session start — the Hermes USER.md — with its own tight cap.
+- **Cold tier** — `recall_search` with `scope:"sessions"` full-text-searches your past Claude Code conversation transcripts, not just distilled memories.
+- **Auto-curation scan** — on session start, low-risk lifecycle transitions (`active → stale → archived`) are applied automatically **to the current project only**; over-cap/duplicate memories are escalated in a scan report. Archived memories leave MEMORY.md but stay searchable. `recall_check` gained `lifecycle` and `caps` reports.
+- **Resurrection-on-access** — loading a stale/archived memory revives it to `active` and re-adds it to MEMORY.md, so memories you actually use never stay buried.
+- **Active review nudge** — every N user turns a `UserPromptSubmit` hook prompts the agent to delegate a memory review to the Haiku `recall-worker`, approval-gated by default (proposes a diff; you confirm before any write).
+- **Injection defense** — content is scanned on write (invisible/control unicode hard-rejected) and delimiter-fenced on load, since memories are injected into the system prompt.
+
+All of it is config-driven — see `recall.config.reference.md`. Set `caps.*` to `0`, or `scan.enabled` / `review.enabled` / `security.scanOnWrite` to `false`, to opt out of any piece.
 
 ## Tools
 
@@ -20,7 +34,7 @@ The plugin ships with:
 |---|---|
 | `recall_save` | Write/update a memory with notation enforcement and content-hash dedup |
 | `recall_load` | Read a memory by name or filename; increments access count |
-| `recall_search` | Query memories across all projects by keyword, type, or project |
+| `recall_search` | Query memories across all projects (`scope:"memories"`) **or** full-text search past session transcripts (`scope:"sessions"`, the cold tier) |
 | `recall_check` | Health checks: staleness, registry drift, broken links, stats |
 | `recall_decode` | Expand Recall notation to plain English |
 | `recall_registry` | CRUD for entity shortcodes in REGISTRY.md |

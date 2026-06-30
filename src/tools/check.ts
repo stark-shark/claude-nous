@@ -2,10 +2,11 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { RecallConfig } from "../lib/config.js";
 import type { MemoryDirEntry } from "../lib/memory-dir.js";
-import { parseHeader, stripHeader } from "../lib/parser.js";
+import { parseHeader, stripHeader, type MemoryState } from "../lib/parser.js";
 import { loadRegistry, findUnknownEntities } from "../lib/registry.js";
 import { decodeMemory } from "../lib/decode.js";
 import { hashContent } from "../lib/dedup.js";
+import { capFor, measureCap } from "../lib/caps.js";
 import {
   COMPRESSION_TARGETS,
   TYPE_NAMES,
@@ -13,7 +14,16 @@ import {
   type MemoryType,
 } from "../lib/symbols.js";
 
-type CheckType = "stale" | "registry" | "compression" | "links" | "duplicates" | "stats" | "all";
+type CheckType =
+  | "stale"
+  | "registry"
+  | "compression"
+  | "links"
+  | "duplicates"
+  | "stats"
+  | "lifecycle"
+  | "caps"
+  | "all";
 
 export interface CheckInput {
   checks: CheckType[];
@@ -33,6 +43,7 @@ interface MemoryInfo {
   links: string[];
   content: string;
   project: string;
+  state: MemoryState;
 }
 
 function loadAllMemories(memoryDirs: MemoryDirEntry[]): MemoryInfo[] {
@@ -63,6 +74,7 @@ function loadAllMemories(memoryDirs: MemoryDirEntry[]): MemoryInfo[] {
         links: header.links ?? [],
         content,
         project: projectHash,
+        state: header.state ?? "active",
       });
     }
   }
@@ -267,13 +279,50 @@ function checkCompression(
   return `Compression — ${issues.length} outside target:\n${issues.join("\n")}`;
 }
 
+function checkLifecycle(memories: MemoryInfo[]): string {
+  const counts: Record<MemoryState, number> = { active: 0, stale: 0, archived: 0 };
+  const stale: string[] = [];
+  const archived: string[] = [];
+  for (const m of memories) {
+    counts[m.state]++;
+    if (m.state === "stale") stale.push(`'${m.name}' [${m.project}]`);
+    if (m.state === "archived") archived.push(`'${m.name}' [${m.project}]`);
+  }
+  const lines = [
+    `Lifecycle — active: ${counts.active}, stale: ${counts.stale}, archived: ${counts.archived}`,
+  ];
+  if (stale.length) lines.push(`  stale: ${stale.join(", ")}`);
+  if (archived.length) lines.push(`  archived (out of MEMORY.md, still searchable): ${archived.join(", ")}`);
+  return lines.join("\n");
+}
+
+function checkCaps(memories: MemoryInfo[], config: RecallConfig): string {
+  const over: string[] = [];
+  const near: string[] = [];
+  for (const m of memories) {
+    const cap = capFor(m.type, m.filename, config);
+    const usage = measureCap(stripHeader(m.content).length, cap);
+    if (usage.unlimited) continue;
+    if (usage.over > 0) {
+      over.push(`  '${m.name}' (${m.type}) — ${usage.used}/${usage.cap} (over by ${usage.over}); consolidate or split`);
+    } else if (usage.pct >= 90) {
+      near.push(`  '${m.name}' (${m.type}) — ${usage.used}/${usage.cap} (${usage.pct}%)`);
+    }
+  }
+  if (over.length === 0 && near.length === 0) return "Caps — all memories within budget";
+  const lines: string[] = [`Caps — ${over.length} over, ${near.length} near (>=90%):`];
+  if (over.length) lines.push(...over);
+  if (near.length) lines.push(...near);
+  return lines.join("\n");
+}
+
 export function handleCheck(
   input: CheckInput,
   memoryDirs: MemoryDirEntry[],
   config: RecallConfig
 ): CheckResult {
   const checks = input.checks.includes("all")
-    ? ["stats", "stale", "registry", "links", "compression", "duplicates"] as CheckType[]
+    ? ["stats", "lifecycle", "caps", "stale", "registry", "links", "compression", "duplicates"] as CheckType[]
     : input.checks;
 
   const memories = loadAllMemories(memoryDirs);
@@ -298,6 +347,12 @@ export function handleCheck(
         break;
       case "duplicates":
         sections.push(checkDuplicates(memories));
+        break;
+      case "lifecycle":
+        sections.push(checkLifecycle(memories));
+        break;
+      case "caps":
+        sections.push(checkCaps(memories, config));
         break;
     }
   }

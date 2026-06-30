@@ -58,3 +58,15 @@ export function ensureMemoryDir(
   fs.mkdirSync(memDir, { recursive: true });
   return memDir;
 }
+
+// Global memory dir — holds the user-scoped profile (user.md) and anything else
+// that should be shared across every project rather than scoped to one.
+export function getGlobalMemoryDir(): string {
+  return path.join(os.homedir(), ".claude", "recall", "memory");
+}
+
+export function ensureGlobalMemoryDir(): string {
+  const dir = getGlobalMemoryDir();
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}

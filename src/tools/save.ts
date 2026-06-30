@@ -9,6 +9,8 @@ import { loadRegistry, findUnknownEntities } from "../lib/registry.js";
 import { upsertIndexEntry, ARCHIVE_FILENAME } from "../lib/index-manager.js";
 import { ensureBidirectionalLinks } from "../lib/links.js";
 import { ensureDecoderFile } from "../lib/decoder-file.js";
+import { capFor, measureCap, usageLine, overflowError } from "../lib/caps.js";
+import { scanContent } from "../lib/threat.js";
 
 export interface SaveInput {
   name: string;
@@ -51,8 +53,61 @@ export function handleSave(
   config: RecallConfig
 ): SaveResult {
   const warnings: string[] = [];
-  const filename = nameToFilename(input.name, input.type);
-  const filePath = path.join(memoryDir, filename);
+  // Reserve the canonical user.md for the usr-type "user"/"profile" memory so it
+  // gets the special always-loaded slot + its own cap.
+  const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  const isUserFile = input.type === "usr" && (slug === "user" || slug === "profile");
+  const filename = isUserFile
+    ? config.userMemory.filename
+    : nameToFilename(input.name, input.type);
+  // The user profile is scoped to the USER (global), not the project.
+  const targetDir = isUserFile && config.userMemory.dir ? config.userMemory.dir : memoryDir;
+  if (targetDir !== memoryDir) fs.mkdirSync(targetDir, { recursive: true });
+  const filePath = path.join(targetDir, filename);
+
+  // Security: scan content before it touches disk / the system prompt.
+  if (config.security.scanOnWrite) {
+    const scan = scanContent(input.content);
+    if (scan.hasHard && config.security.rejectInvisible) {
+      return {
+        text:
+          `Rejected — content failed security scan:\n` +
+          scan.threats
+            .filter((t) => t.severity === "hard")
+            .map((t) => `  ✖ ${t.detail}`)
+            .join("\n") +
+          `\n\nNothing was written. Remove the flagged characters and retry.`,
+        isError: true,
+        warnings: [],
+        filename,
+      };
+    }
+    for (const t of scan.threats.filter((t) => t.severity === "soft")) {
+      warnings.push(`security: ${t.detail}`);
+    }
+  }
+
+  // Hermes-style hard cap on the notation body — force consolidation, never auto-truncate.
+  {
+    const cap = capFor(input.type, filename, config);
+    const usage = measureCap(input.content.length, cap);
+    if (!usage.unlimited && usage.over > 0) {
+      let existingBody: string | null = null;
+      if (fs.existsSync(filePath)) {
+        try {
+          existingBody = stripHeader(fs.readFileSync(filePath, "utf-8"));
+        } catch {
+          existingBody = null;
+        }
+      }
+      return {
+        text: overflowError(input.name, input.type, usage, existingBody),
+        isError: true,
+        warnings: [],
+        filename,
+      };
+    }
+  }
 
   // Validate notation
   if (config.notationEnforcement !== "off") {
@@ -158,8 +213,8 @@ export function handleSave(
   // Refresh decoder cheatsheet alongside memories — survives plugin uninstall.
   ensureDecoderFile(memoryDir);
 
-  // Update index
-  if (config.maintainIndex) {
+  // Update index (skip the user profile — it lives globally and is always injected)
+  if (config.maintainIndex && !isUserFile) {
     const indexPath = path.join(memoryDir, config.indexFile);
     const { archived } = upsertIndexEntry(
       indexPath,
@@ -176,7 +231,7 @@ export function handleSave(
   }
 
   // Maintain bidirectional links (best-effort; a failure here doesn't invalidate the save)
-  if (config.headerFields.links && header.links && header.links.length > 0) {
+  if (config.headerFields.links && !isUserFile && header.links && header.links.length > 0) {
     try {
       const { crossProject } = ensureBidirectionalLinks(
         filename.replace(".md", ""),
@@ -197,6 +252,13 @@ export function handleSave(
 
   const action = isUpdate ? "Updated" : "Saved";
   let text = `${action} memory: '${input.name}' (${input.type}) → ${filename}`;
+  const usage = usageLine(
+    input.type,
+    filename,
+    measureCap(input.content.length, capFor(input.type, filename, config)),
+    config
+  );
+  if (usage) text += `  [${usage}]`;
   if (warnings.length > 0) {
     text += `\n\nWarnings:\n${warnings.map((w) => `  ⚠ ${w}`).join("\n")}`;
   }

@@ -113,4 +113,47 @@ describe("handleSave", () => {
     expect(index).toContain("N2");
     expect(index).toContain("## Section C");
   });
+
+  it("rejects content over the type cap with a consolidation error", () => {
+    const cfg = { ...DEFAULT_CONFIG, caps: { ...DEFAULT_CONFIG.caps, ref: 50 } };
+    const result = handleSave(
+      { name: "Big", type: "ref", description: "d", content: "x->y :: z ".repeat(20) },
+      tmpDir,
+      cfg
+    );
+    expect(result.isError).toBe(true);
+    expect(result.text).toContain("Cap exceeded");
+    expect(fs.existsSync(path.join(tmpDir, "reference_big.md"))).toBe(false);
+  });
+
+  it("adds a usage line on successful save", () => {
+    const result = handleSave(
+      { name: "Small", type: "ref", description: "d", content: "x->y :: z" },
+      tmpDir,
+      DEFAULT_CONFIG
+    );
+    expect(result.text).toMatch(/MEMORY\[ref\] \d+% — \d+\/\d+/);
+  });
+
+  it("routes the usr 'user' memory to user.md with the user cap", () => {
+    const result = handleSave(
+      { name: "user", type: "usr", description: "profile", content: "Connor -> midwest :: IT" },
+      tmpDir,
+      DEFAULT_CONFIG
+    );
+    expect(result.isError).toBeFalsy();
+    expect(fs.existsSync(path.join(tmpDir, "user.md"))).toBe(true);
+    expect(result.text).toMatch(/USER \d+%/);
+  });
+
+  it("hard-rejects content with invisible unicode", () => {
+    const zwsp = String.fromCharCode(0x200b);
+    const result = handleSave(
+      { name: "Sneaky", type: "ref", description: "d", content: `x->y${zwsp} :: z` },
+      tmpDir,
+      DEFAULT_CONFIG
+    );
+    expect(result.isError).toBe(true);
+    expect(result.text).toContain("security scan");
+  });
 });

@@ -20,5 +20,46 @@
     "staleDays": 30,              // Days since U: before flagging
     "staleMinAccess": 2,          // Access count below which stale memories get flagged
     "compressionTolerancePct": 10 // Allowed % above target compression ratio
+  },
+
+  // Hermes-style hard caps on the notation body (characters). 0 = unlimited.
+  // A save over cap returns a consolidate-or-remove error instead of writing —
+  // it never auto-truncates. Because the body is already Recall notation, a cap
+  // holds far more knowledge than the same cap of raw prose.
+  "caps": {
+    "fb": 1200,
+    "proj": 2200,
+    "ref": 2200,
+    "usr": 1375,
+    "user": 1375   // the always-loaded user.md profile
+  },
+
+  // Prompt-injection defenses (memories are injected into the system prompt)
+  "security": {
+    "scanOnWrite": true,     // scan content before save
+    "scanOnLoad": true,      // fence + scan content on recall_load
+    "rejectInvisible": true  // hard-reject invisible/control unicode on write
+  },
+
+  // Auto-apply low-risk curation scan, run on SessionStart (current project only)
+  "scan": {
+    "enabled": true,
+    "autoArchiveStale": true,    // active->stale->archived transitions applied automatically
+    "archiveAfterStaleDays": 30  // extra days past stale before archiving
+  },
+
+  // Active mid-session review ("nudge"): every N user turns, prompt the agent to
+  // delegate a memory review to the recall-worker (Haiku) subagent.
+  "review": {
+    "enabled": true,
+    "everyNTurns": 10,
+    "approvalGate": true   // true = worker proposes a diff, user confirms before any write
+  },
+
+  // The canonical Hermes-style USER.md — always injected at session start, capped.
+  // A usr-type memory named "user" or "profile" writes here.
+  "userMemory": {
+    "filename": "user.md",
+    "alwaysLoad": true
   }
 }

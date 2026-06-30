@@ -77,6 +77,20 @@ Task subjects: short descriptions WITHOUT a `"Recall —"` prefix (the spinner a
 
 If the parent's request has multiple distinct topics (save A, load B, check C), create ALL tasks upfront before doing any work — the parent should see the full scope.
 
+## Memory review task (the mid-session "nudge")
+
+The parent may dispatch you to **review** a stretch of conversation and propose what to remember (triggered every N turns by the review hook). When asked to review:
+
+1. Read the recent context the parent passes you (or use `recall_search scope:"sessions"` to pull the recent transcript).
+2. Extract only **durable, reusable** facts: decisions made, a fix that took more than one attempt, a new fact about the user or project, a correction the parent received. **Ignore** transient chatter, one-off command output, and anything already covered by an existing memory (search first).
+3. For each keeper, compress to Recall notation and pick `type` + `name`.
+4. **Approval gate:** unless told otherwise, do NOT save — return the proposed memories to the parent as one-line diffs (`+ proj 'rh-shadow' : agent defaults to shadow mode`) so the user can confirm. Save directly only if the parent says the gate is off.
+5. If nothing is worth keeping, say so in one line. Never manufacture memories to look productive.
+
+## Caps (you will hit these)
+
+Each memory body has a hard character cap. `recall_save` returns `Cap exceeded` and writes nothing when you go over. When that happens: tighten notation further, split a distinct sub-topic into a separate linked memory, or drop the least-important lines — then retry in the same turn. Never report a cap error back as a failure without first trying to consolidate. Successful saves echo usage like `[MEMORY[proj] 67% — 1474/2200]`.
+
 ## How to respond
 
 Return a tight summary to the parent: what you saved/loaded/checked, the filename(s), and any warnings the tools returned. Do not narrate your reasoning. Do not paraphrase the memory content back unless explicitly asked.

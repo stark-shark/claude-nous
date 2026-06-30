@@ -1,5 +1,7 @@
 import { VALID_TYPES, type MemoryType } from "./symbols.js";
 
+export type MemoryState = "active" | "stale" | "archived";
+
 export interface MemoryHeader {
   type: MemoryType;
   name: string;
@@ -8,7 +10,10 @@ export interface MemoryHeader {
   updated?: string;
   accessCount?: number;
   links?: string[];
+  state?: MemoryState; // lifecycle; absent === "active"
 }
+
+const VALID_STATES: MemoryState[] = ["active", "stale", "archived"];
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -202,6 +207,9 @@ function parseNewFormat(lines: string[], block: FrontmatterBlock): MemoryHeader 
     const links = recall.links.filter((l): l is string => typeof l === "string" && l.length > 0);
     if (links.length > 0) header.links = links;
   }
+  if (typeof recall.state === "string" && VALID_STATES.includes(recall.state as MemoryState)) {
+    header.state = recall.state as MemoryState;
+  }
 
   return header;
 }
@@ -346,6 +354,10 @@ export function serializeHeader(header: MemoryHeader): string {
     for (const link of header.links) {
       lines.push(`      - ${link}`);
     }
+  }
+  // Only persist non-default lifecycle state; absence means "active".
+  if (header.state !== undefined && header.state !== "active") {
+    lines.push(`    state: ${header.state}`);
   }
   lines.push("---");
   return lines.join("\n");
