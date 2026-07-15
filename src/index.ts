@@ -451,8 +451,15 @@ server.registerTool(
     if (action === "scan") {
       const items = scanCapPressure(readDirs(), config, { overOnly: false });
       if (items.length === 0) return { content: [{ type: "text" as const, text: "No memories under cap pressure." }] };
+      // Disambiguate collided names (e.g. two memories sharing a humanName) by
+      // appending the filename so the user can tell them apart.
+      const nameCounts = new Map<string, number>();
+      for (const m of items) nameCounts.set(m.name, (nameCounts.get(m.name) ?? 0) + 1);
       const text = items
-        .map((m) => `- ${m.name} (${m.type}) ${m.used}/${m.cap} (${m.pct}%)${m.over > 0 ? " — OVER" : ""}`)
+        .map((m) => {
+          const suffix = (nameCounts.get(m.name) ?? 0) > 1 ? ` [${m.file}]` : "";
+          return `- ${m.name}${suffix} (${m.type}) ${m.used}/${m.cap} (${m.pct}%)${m.over > 0 ? " — OVER" : ""}`;
+        })
         .join("\n");
       return { content: [{ type: "text" as const, text: `Cap pressure:\n${text}` }] };
     }

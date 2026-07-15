@@ -26758,7 +26758,7 @@ ${m.body}`;
 }
 
 // src/index.ts
-var VERSION = true ? "1.1.3" : "0.0.0-dev";
+var VERSION = true ? "1.1.4" : "0.0.0-dev";
 var _emitWarning = process.emitWarning.bind(process);
 process.emitWarning = ((warning, ...rest) => {
   const msg = typeof warning === "string" ? warning : warning?.message ?? "";
@@ -27072,7 +27072,12 @@ server.registerTool(
     if (action === "scan") {
       const items = scanCapPressure(readDirs(), config2, { overOnly: false });
       if (items.length === 0) return { content: [{ type: "text", text: "No memories under cap pressure." }] };
-      const text = items.map((m) => `- ${m.name} (${m.type}) ${m.used}/${m.cap} (${m.pct}%)${m.over > 0 ? " \u2014 OVER" : ""}`).join("\n");
+      const nameCounts = /* @__PURE__ */ new Map();
+      for (const m of items) nameCounts.set(m.name, (nameCounts.get(m.name) ?? 0) + 1);
+      const text = items.map((m) => {
+        const suffix = (nameCounts.get(m.name) ?? 0) > 1 ? ` [${m.file}]` : "";
+        return `- ${m.name}${suffix} (${m.type}) ${m.used}/${m.cap} (${m.pct}%)${m.over > 0 ? " \u2014 OVER" : ""}`;
+      }).join("\n");
       return { content: [{ type: "text", text: `Cap pressure:
 ${text}` }] };
     }

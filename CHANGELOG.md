@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.4
+
+- **polish(maintain):** `nous_maintain scan` appends the filename to entries whose memory name collides (e.g. two memories sharing a `humanName`), so duplicates are distinguishable at a glance.
+
 ## 1.1.3
 
 - **fix(save/maintain):** `nous_save` accepts an exact `file` override, and `nous_maintain apply` passes the condense proposal's source filename through it. Previously apply re-derived the filename from the memory name, so condensing a memory whose stored filename doesn't match derivation — or that shares a `humanName` with another memory — could write to the **wrong file** (clobbering a different memory, leaving the over-cap one untouched). The filename-collision guard still blocks overwriting a differently-named memory's file.
