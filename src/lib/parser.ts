@@ -1,4 +1,4 @@
-import { VALID_TYPES, type MemoryType } from "./symbols.js";
+import { normalizeType, type MemoryType } from "./symbols.js";
 
 export type MemoryState = "active" | "stale" | "archived";
 
@@ -176,8 +176,8 @@ function parseNewFormat(lines: string[], block: FrontmatterBlock): MemoryHeader 
 
   const typeRaw = meta.type;
   if (typeof typeRaw !== "string") return null;
-  if (!VALID_TYPES.includes(typeRaw as MemoryType)) return null;
-  const type = typeRaw as MemoryType;
+  const type = normalizeType(typeRaw);
+  if (!type) return null;
 
   // Read-compat: v1 writes metadata.nous; legacy memories use metadata.recall.
   const recallRaw = meta.nous ?? meta.recall;
@@ -256,9 +256,10 @@ function parseLegacyFormat(lines: string[], block: FrontmatterBlock): MemoryHead
   }
 
   if (!type || !name || !description) return null;
-  if (!VALID_TYPES.includes(type as MemoryType)) return null;
+  const normalizedType = normalizeType(type);
+  if (!normalizedType) return null;
 
-  const header: MemoryHeader = { type: type as MemoryType, name, description };
+  const header: MemoryHeader = { type: normalizedType, name, description };
   if (created !== undefined) header.created = created;
   if (updated !== undefined) header.updated = updated;
   if (accessCount !== undefined) header.accessCount = accessCount;

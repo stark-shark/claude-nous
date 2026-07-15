@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.5
+
+- **fix(parser):** accept long-form `type:` aliases (`project`→`proj`, `feedback`→`fb`, `reference`→`ref`, `user`→`usr`), case/whitespace-tolerant. Claude Code's native auto-memory writes long-form types; previously such co-owned memory files silently failed to parse and went **invisible** to Nous (didn't load, didn't index, broke links pointing at them). Now they canonicalize on read.
+
 ## 1.1.4
 
 - **polish(maintain):** `nous_maintain scan` appends the filename to entries whose memory name collides (e.g. two memories sharing a `humanName`), so duplicates are distinguishable at a glance.

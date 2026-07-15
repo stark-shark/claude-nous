@@ -23432,6 +23432,19 @@ import * as path6 from "node:path";
 
 // src/lib/symbols.ts
 var VALID_TYPES = ["fb", "proj", "ref", "usr"];
+var TYPE_ALIASES = {
+  fb: "fb",
+  feedback: "fb",
+  proj: "proj",
+  project: "proj",
+  ref: "ref",
+  reference: "ref",
+  usr: "usr",
+  user: "usr"
+};
+function normalizeType(raw) {
+  return TYPE_ALIASES[raw.trim().toLowerCase()] ?? null;
+}
 var TYPE_NAMES = {
   fb: "feedback",
   proj: "project",
@@ -23585,8 +23598,8 @@ function parseNewFormat(lines, block) {
   const meta3 = metadata;
   const typeRaw = meta3.type;
   if (typeof typeRaw !== "string") return null;
-  if (!VALID_TYPES.includes(typeRaw)) return null;
-  const type = typeRaw;
+  const type = normalizeType(typeRaw);
+  if (!type) return null;
   const recallRaw = meta3.nous ?? meta3.recall;
   const recall = recallRaw && typeof recallRaw === "object" && !Array.isArray(recallRaw) ? recallRaw : {};
   const nameSlug = typeof data.name === "string" ? data.name : "";
@@ -23643,8 +23656,9 @@ function parseLegacyFormat(lines, block) {
     }
   }
   if (!type || !name || !description) return null;
-  if (!VALID_TYPES.includes(type)) return null;
-  const header = { type, name, description };
+  const normalizedType = normalizeType(type);
+  if (!normalizedType) return null;
+  const header = { type: normalizedType, name, description };
   if (created !== void 0) header.created = created;
   if (updated !== void 0) header.updated = updated;
   if (accessCount !== void 0) header.accessCount = accessCount;
@@ -26758,7 +26772,7 @@ ${m.body}`;
 }
 
 // src/index.ts
-var VERSION = true ? "1.1.4" : "0.0.0-dev";
+var VERSION = true ? "1.1.5" : "0.0.0-dev";
 var _emitWarning = process.emitWarning.bind(process);
 process.emitWarning = ((warning, ...rest) => {
   const msg = typeof warning === "string" ? warning : warning?.message ?? "";

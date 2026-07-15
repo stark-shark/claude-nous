@@ -19,6 +19,21 @@ export const SYMBOL_GRAMMAR: Record<
 export const VALID_TYPES = ["fb", "proj", "ref", "usr"] as const;
 export type MemoryType = (typeof VALID_TYPES)[number];
 
+// Accept long-form type aliases too. Claude Code's native auto-memory writes
+// `type: project`/`feedback`/`reference`/`user`; Nous canonicalizes to its short
+// codes so those co-owned memory files still parse instead of going invisible.
+const TYPE_ALIASES: Record<string, MemoryType> = {
+  fb: "fb", feedback: "fb",
+  proj: "proj", project: "proj",
+  ref: "ref", reference: "ref",
+  usr: "usr", user: "usr",
+};
+
+/** Canonicalize a raw type string to a MemoryType, or null if unrecognized. */
+export function normalizeType(raw: string): MemoryType | null {
+  return TYPE_ALIASES[raw.trim().toLowerCase()] ?? null;
+}
+
 export const TYPE_NAMES: Record<MemoryType, string> = {
   fb: "feedback",
   proj: "project",
