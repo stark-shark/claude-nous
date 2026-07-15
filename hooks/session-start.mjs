@@ -56,6 +56,13 @@ try {
   // migration failure must never break the session
 }
 
+// Seed RULES.md from the shipped template on first run.
+try {
+  execFileSync(process.execPath, [DIST, "--seed-rules"], { timeout: 8000, cwd });
+} catch {
+  /* best effort */
+}
+
 // --- 2. always-loaded user.md (fenced) --------------------------------------
 let userBlock = "";
 try {
@@ -90,6 +97,20 @@ try {
   // scan failure must never break the session
 }
 
+// --- 3b. session context: daily digest + RULES + pending review proposals ---
+let contextBlock = "";
+try {
+  const out = execFileSync(process.execPath, [DIST, "--session-context"], {
+    encoding: "utf8",
+    timeout: 8000,
+    cwd,
+  });
+  const trimmed = (out || "").trim();
+  if (trimmed) contextBlock = "\n\n" + trimmed;
+} catch {
+  // context injection is best-effort
+}
+
 const additionalContext =
   "<NOUS_PLUGIN>\n" +
   "You have the Nous memory system installed.\n\n" +
@@ -98,6 +119,7 @@ const additionalContext =
   "\n\n" +
   "**IMPORTANT:** When the user asks about any topic that could have a memory, use nous_search/nous_load — do NOT use manual file Read or Explore agents to find memory content." +
   userBlock +
+  contextBlock +
   scanBlock +
   "\n</NOUS_PLUGIN>";
 

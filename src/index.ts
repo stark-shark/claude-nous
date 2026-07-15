@@ -1,8 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import * as z from "zod/v4";
+import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
+import { fileURLToPath } from "node:url";
 
 // Injected at build time by scripts/build.mjs from package.json. Fallback to
 // "0.0.0-dev" when running unbundled source (e.g. tests, `tsc --watch`).
@@ -42,6 +44,17 @@ import {
   writePlaceholder,
   pendingSummaries,
 } from "./lib/summarize.js";
+import { injectDaily } from "./lib/daily.js";
+import { nousDir, addProposal, listProposals, sha, type Proposal } from "./lib/selfbuild.js";
+
+// Silence node:sqlite's ExperimentalWarning — it's expected and would otherwise
+// pollute hook stderr / CLI output on every invocation.
+const _emitWarning = process.emitWarning.bind(process);
+process.emitWarning = ((warning: string | Error, ...rest: unknown[]) => {
+  const msg = typeof warning === "string" ? warning : warning?.message ?? "";
+  if (/SQLite is an experimental feature/i.test(msg)) return;
+  return (_emitWarning as (w: string | Error, ...a: unknown[]) => void)(warning, ...rest);
+}) as typeof process.emitWarning;
 
 // Non-destructive one-time copy of pre-v1 ~/.claude/recall data. Runs before
 // any dir resolution so config/global-memory land in place first.
@@ -490,6 +503,72 @@ async function runCli(): Promise<boolean> {
 
   if (argv.includes("--db-stats")) {
     process.stdout.write(formatDbStats() + "\n");
+    return true;
+  }
+
+  // Seed RULES.md from the shipped template if absent (called by SessionStart).
+  if (argv.includes("--seed-rules")) {
+    try {
+      const dest = path.join(nousDir(), "RULES.md");
+      if (!fs.existsSync(dest)) {
+        const distDir = path.dirname(fileURLToPath(import.meta.url));
+        const tpl = path.join(distDir, "..", "RULES.default.md");
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        if (fs.existsSync(tpl)) fs.copyFileSync(tpl, dest);
+      }
+    } catch {
+      /* best effort */
+    }
+    return true;
+  }
+
+  // Print the SessionStart injection block: daily digest + RULES + pending count.
+  if (argv.includes("--session-context")) {
+    const parts: string[] = [];
+    const daily = injectDaily(config, config.userMemory.dir);
+    if (daily) parts.push("**RECENT DAYS (Nous daily digest):**\n" + daily);
+    try {
+      const rules = fs.readFileSync(path.join(nousDir(), "RULES.md"), "utf8").trim();
+      if (rules) parts.push("**SAVE RULES (nous_rules to edit):**\n" + rules);
+    } catch {
+      /* no rules yet */
+    }
+    const pend = listProposals();
+    if (pend.length) {
+      parts.push(
+        `**NOUS PENDING (${pend.length}):** background review staged proposals — review with nous_rules/nous_skill:\n` +
+          pend.map((p) => `- [${p.kind}] ${p.id} — ${p.note}`).join("\n")
+      );
+    }
+    process.stdout.write(parts.join("\n\n"));
+    return true;
+  }
+
+  // Stage proposals from a background review (JSON array on stdin).
+  if (argv.includes("--stage-proposals")) {
+    const raw = await readStdin();
+    let items: Array<Partial<Proposal> & { name?: string }> = [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) items = parsed;
+    } catch {
+      process.stdout.write("stage: invalid JSON\n");
+      return true;
+    }
+    let staged = 0;
+    for (const it of items) {
+      if (!it.note || !it.payload) continue;
+      const kind = it.kind === "skill" || it.kind === "memory" ? it.kind : "memory";
+      addProposal({
+        kind,
+        target: it.target ?? it.name ?? "(unspecified)",
+        note: it.note,
+        payload: it.payload,
+        baseHash: it.baseHash ?? sha(""),
+      });
+      staged++;
+    }
+    process.stdout.write(`staged ${staged} proposal(s)\n`);
     return true;
   }
 

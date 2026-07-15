@@ -6785,12 +6785,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs23, exportName) {
+    function addFormats(ajv, list, fs24, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs23[f]);
+        ajv.addFormat(f, fs24[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -23220,8 +23220,10 @@ var StdioServerTransport = class {
 };
 
 // src/index.ts
+import * as fs23 from "node:fs";
 import * as path22 from "node:path";
 import * as os7 from "node:os";
+import { fileURLToPath } from "node:url";
 
 // src/lib/config.ts
 import * as fs from "node:fs";
@@ -26535,6 +26537,35 @@ function appendDigest(date4, entry, base) {
   } catch {
   }
 }
+function ymd(d) {
+  return d.toISOString().slice(0, 10);
+}
+function injectDaily(cfg, base, now) {
+  if (!cfg.daily.enabled) return "";
+  const dir = daysDir(base);
+  const days = Math.max(1, cfg.daily.injectDays);
+  const ref = now ?? /* @__PURE__ */ new Date();
+  const blocks = [];
+  let used = 0;
+  for (let i = 0; i < days; i++) {
+    const d = new Date(ref.getTime() - i * 864e5);
+    const file2 = path21.join(dir, `${ymd(d)}.md`);
+    let body;
+    try {
+      body = fs22.readFileSync(file2, "utf8").trim();
+    } catch {
+      continue;
+    }
+    if (!body) continue;
+    if (used + body.length > cfg.daily.cap) {
+      body = body.slice(0, Math.max(0, cfg.daily.cap - used));
+    }
+    blocks.push(body);
+    used += body.length;
+    if (used >= cfg.daily.cap) break;
+  }
+  return blocks.join("\n\n");
+}
 
 // src/lib/summarize.ts
 function capTurn(content, cap) {
@@ -26647,6 +26678,12 @@ function pendingSummaries(db, cfg) {
 
 // src/index.ts
 var VERSION = typeof __NOUS_VERSION__ === "string" ? __NOUS_VERSION__ : "0.0.0-dev";
+var _emitWarning = process.emitWarning.bind(process);
+process.emitWarning = ((warning, ...rest) => {
+  const msg = typeof warning === "string" ? warning : warning?.message ?? "";
+  if (/SQLite is an experimental feature/i.test(msg)) return;
+  return _emitWarning(warning, ...rest);
+});
 migrateFromRecall();
 var SERVER_DIR = path22.join(os7.homedir(), ".claude", "nous");
 var CONFIG_PATH = path22.join(SERVER_DIR, "nous.config.jsonc");
@@ -26994,6 +27031,65 @@ async function runCli() {
   }
   if (argv.includes("--db-stats")) {
     process.stdout.write(formatDbStats() + "\n");
+    return true;
+  }
+  if (argv.includes("--seed-rules")) {
+    try {
+      const dest = path22.join(nousDir(), "RULES.md");
+      if (!fs23.existsSync(dest)) {
+        const distDir = path22.dirname(fileURLToPath(import.meta.url));
+        const tpl = path22.join(distDir, "..", "RULES.default.md");
+        fs23.mkdirSync(path22.dirname(dest), { recursive: true });
+        if (fs23.existsSync(tpl)) fs23.copyFileSync(tpl, dest);
+      }
+    } catch {
+    }
+    return true;
+  }
+  if (argv.includes("--session-context")) {
+    const parts = [];
+    const daily = injectDaily(config2, config2.userMemory.dir);
+    if (daily) parts.push("**RECENT DAYS (Nous daily digest):**\n" + daily);
+    try {
+      const rules = fs23.readFileSync(path22.join(nousDir(), "RULES.md"), "utf8").trim();
+      if (rules) parts.push("**SAVE RULES (nous_rules to edit):**\n" + rules);
+    } catch {
+    }
+    const pend = listProposals();
+    if (pend.length) {
+      parts.push(
+        `**NOUS PENDING (${pend.length}):** background review staged proposals \u2014 review with nous_rules/nous_skill:
+` + pend.map((p) => `- [${p.kind}] ${p.id} \u2014 ${p.note}`).join("\n")
+      );
+    }
+    process.stdout.write(parts.join("\n\n"));
+    return true;
+  }
+  if (argv.includes("--stage-proposals")) {
+    const raw = await readStdin();
+    let items = [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) items = parsed;
+    } catch {
+      process.stdout.write("stage: invalid JSON\n");
+      return true;
+    }
+    let staged = 0;
+    for (const it of items) {
+      if (!it.note || !it.payload) continue;
+      const kind = it.kind === "skill" || it.kind === "memory" ? it.kind : "memory";
+      addProposal({
+        kind,
+        target: it.target ?? it.name ?? "(unspecified)",
+        note: it.note,
+        payload: it.payload,
+        baseHash: it.baseHash ?? sha("")
+      });
+      staged++;
+    }
+    process.stdout.write(`staged ${staged} proposal(s)
+`);
     return true;
   }
   if (argv.includes("--index") || argv.includes("--index-file")) {

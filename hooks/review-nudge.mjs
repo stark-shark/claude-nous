@@ -14,7 +14,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-const DEFAULTS = { enabled: true, everyNTurns: 10, approvalGate: true };
+const DEFAULTS = { enabled: true, everyNTurns: 10, approvalGate: true, mode: "background" };
 
 function loadReviewConfig() {
   try {
@@ -42,7 +42,9 @@ function emit(additionalContext) {
 }
 
 const review = loadReviewConfig();
-if (!review.enabled || !(review.everyNTurns > 0)) {
+// In v1 the default review runs post-turn in the background (Stop hook). The
+// in-context nudge only fires when explicitly configured mode:"nudge".
+if (!review.enabled || review.mode !== "nudge" || !(review.everyNTurns > 0)) {
   emit("");
   process.exit(0);
 }
