@@ -1,6 +1,6 @@
 {
   "name": "nous-mcp",
-  "version": "0.8.0",
+  "version": "1.0.0",
   "description": "Nous — MCP server for compressed memory notation in Claude Code",
   "type": "module",
   "main": "dist/index.js",

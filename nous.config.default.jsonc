@@ -48,12 +48,16 @@
     "archiveAfterStaleDays": 30  // extra days past stale before archiving
   },
 
-  // Active mid-session review ("nudge"): every N user turns, prompt the agent to
-  // delegate a memory review to the nous-worker (Haiku) subagent.
+  // Mid-session review. mode "background" (default) = a detached Haiku pass every
+  // everyNTurns turns stages proposals to the pending queue (surfaced next start);
+  // "nudge" = legacy in-context prompt; "off" = disabled. rulesInterval paces the
+  // self-build (RULES/skills) review separately.
   "review": {
     "enabled": true,
+    "mode": "background",
     "everyNTurns": 10,
-    "approvalGate": true   // true = worker proposes a diff, user confirms before any write
+    "rulesInterval": 10,
+    "approvalGate": true   // true = proposals staged, user confirms before any write
   },
 
   // The canonical Hermes-style USER.md — always injected at session start, capped.
@@ -61,5 +65,47 @@
   "userMemory": {
     "filename": "user.md",
     "alwaysLoad": true
+  },
+
+  // Cold-tier capture: index every session into SQLite (LLM-free) and summarize
+  // via headless Haiku. summarize: "auto" (SessionEnd spawns it) | "nudge" | "off".
+  "capture": {
+    "enabled": true,
+    "summarize": "auto",
+    "minTurns": 3,               // don't summarize trivially short sessions
+    "haikuModel": "claude-haiku-4-5",
+    "maxTranscriptChars": 60000, // whole-transcript cap for the summarizer input
+    "perTurnCap": 3000,          // a single longer turn is head+tail truncated first
+    "redact": true,              // strip secrets/PII before FTS + injection
+    "redactExtra": []            // extra user regex patterns to redact
+  },
+
+  // Recall ladder tuning.
+  "ladder": {
+    "expandWindow": 5,     // ± messages around a hit in the anchored view
+    "bookend": 3,          // first/last N messages shown as goal/resolution
+    "maxHits": 20,
+    "rrfK": 60,            // reciprocal-rank-fusion constant
+    "escalateBelow": 0.15  // top-hit confidence below which Haiku expansion helps
+  },
+
+  // Daily digest files (memory/days/YYYY-MM-DD.md), today+yesterday injected.
+  "daily": { "enabled": true, "injectDays": 2, "cap": 2000 },
+
+  // Self-building save-rules (RULES.md) — approval-gated, versioned.
+  "rules": { "enabled": true, "approvalGate": true, "maxBackups": 20 },
+
+  // Agent-authored procedural skills (written to dir, auto-discovered).
+  "skills": { "enabled": true, "approvalGate": true, "dir": "~/.claude/skills", "maxBackups": 20 },
+
+  // Self-maintaining MEMORY.md / user.md.
+  "maintain": { "autoLowRisk": true, "gateContentEdits": true, "gateUserEdits": true },
+
+  // DB maintenance. Session-prune OFF by default (total-recall goal).
+  "retention": {
+    "vacuum": true,
+    "vacuumMinIntervalHours": 24,
+    "pruneSessions": false,
+    "pruneDays": 180
   }
 }

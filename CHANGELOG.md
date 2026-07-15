@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.0
+
+**Rename Recall → Nous** and a full total-recall revamp (Hermes-audited against the real NousResearch/hermes-agent engine).
+
+- **Renamed** the whole plugin: package `nous-mcp`, MCP server `nous`, tools `nous_*`, commands `/nous-*`, agent `nous-worker`, skill `nous`, data dir `~/.claude/nous`, config `nous.config.jsonc`, header key `metadata.nous.*`. Legacy `metadata.recall.*` + `T:`/`D:` headers still parse. **Non-destructive auto-migration** copies memory/state/config from `~/.claude/recall` on first run.
+- **Cold tier on SQLite (`node:sqlite`, zero new deps)** — every session captured into a local FTS5 index. Standalone FTS5 (not external-content), two-tier migration (column reconcile + version gate), FTS5 capability probe + corrupt-FTS rebuild, WAL with network-FS fallback. Node ≥22.5 for the DB; brute-scan fallback otherwise.
+- **Recall ladder** — `nous_search scope:"sessions"` runs BM25 + recency reciprocal-rank-fusion, hides subagent/tool sources and demotes cron, and returns the top hit's **goal + resolution bookends** and an anchored window in one call. Scroll/read more via `session_id`/`around`/`full`. FTS query sanitizer auto-quotes dotted/hyphenated identifiers. Answers cite session + date; low-confidence hits suggest Haiku query expansion.
+- **Capture pipeline** — `Stop` hook incrementally indexes each turn (LLM-free); `SessionEnd` summarizes via headless Haiku into the DB + per-date **daily digests** (`memory/days/*.md`, today+yesterday injected at session start). Summarizer snaps to turn boundaries and writes a placeholder on failure.
+- **Secret redaction at capture** (`redact.ts`) — keys/tokens/JWT/PEM/assignments/connection-strings stripped before anything reaches FTS or injection; stable salted markers preserve dedup. No blind entropy matching (keeps git SHAs/paths).
+- **Background review** — a detached Haiku pass every N turns **stages** memory/skill proposals to a pending queue (approval gate preserved); surfaced at next session start. Durable turn counter (JSONL-derived). Legacy in-context `nudge` mode still available.
+- **Self-building** — `nous_rules` (editable RULES.md) and `nous_skill` (author procedural skills to `~/.claude/skills`). Both approval-gated with propose→apply→rollback, drift guard, path/symlink hardening, frontmatter validation, and versioned backups (rotation that actually deletes). Core `nous` skill is read-only.
+- **Self-maintaining memory** — `nous_save` batch mode (add+replace+remove) for consolidation; low-risk upkeep auto-applies, content + user.md edits are staged for approval.
+- **`nous_forget`** — right-to-forget purge across DB + FTS with a tombstone so re-indexing can't resurrect it.
+- New commands: `/nous-find`, `/nous-status`, `/nous-remember`, `/nous-forget`, `/nous-rules`, `/nous-skill`, `/nous-import`, `/nous-export`. New config sections: `capture`, `ladder`, `daily`, `rules`, `skills`, `maintain`, `retention`, plus `review.mode`/`rulesInterval`.
+
 ## 0.7.0
 
 Follow-ups to the v0.6 Hermes-style memory work.
