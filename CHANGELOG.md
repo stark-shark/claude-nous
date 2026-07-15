@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.3
+
+- **fix(save/maintain):** `nous_save` accepts an exact `file` override, and `nous_maintain apply` passes the condense proposal's source filename through it. Previously apply re-derived the filename from the memory name, so condensing a memory whose stored filename doesn't match derivation — or that shares a `humanName` with another memory — could write to the **wrong file** (clobbering a different memory, leaving the over-cap one untouched). The filename-collision guard still blocks overwriting a differently-named memory's file.
+
 ## 1.1.2
 
 - **fix(save):** `nous_save` now backs up the prior memory body to `<memoryDir>/.backups/` before any overwrite (rotated). Previously overwrites — especially an autonomous condense via `nous_maintain apply` — were a silent, irreversible loss of hand-written content, the exact anti-guardrail the design exists to prevent.

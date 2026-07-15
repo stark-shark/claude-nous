@@ -89,6 +89,7 @@ try {
         description: m.description,
         content: body,
         memoryDir: m.memoryDir,
+        file: m.file, // exact source filename — apply must not re-derive it
       }),
     });
   }

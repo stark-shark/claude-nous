@@ -465,7 +465,7 @@ server.registerTool(
     if (!id) return { content: [{ type: "text" as const, text: "apply requires an id." }], isError: true };
     const p = getProposal(id);
     if (!p || p.kind !== "memory") return { content: [{ type: "text" as const, text: `No memory proposal '${id}'.` }], isError: true };
-    let spec: { name: string; type: "fb" | "proj" | "ref" | "usr"; description: string; content: string; memoryDir?: string };
+    let spec: { name: string; type: "fb" | "proj" | "ref" | "usr"; description: string; content: string; memoryDir?: string; file?: string };
     try {
       spec = JSON.parse(p.payload);
     } catch {
@@ -473,7 +473,9 @@ server.registerTool(
     }
     const memDir = spec.memoryDir || ensureMemoryDir(getCurrentProjectHash(), getProjectsRoot());
     const result = handleSave(
-      { name: spec.name, type: spec.type, description: spec.description, content: spec.content },
+      // Pass the exact source filename so the condense updates the ORIGINAL file,
+      // never a re-derived (possibly different/new) one.
+      { name: spec.name, type: spec.type, description: spec.description, content: spec.content, file: spec.file },
       memDir,
       config
     );

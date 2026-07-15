@@ -20,6 +20,11 @@ export interface SaveInput {
   content: string;
   links?: string[];
   project?: string;
+  // Exact target filename override (basename only). Used when updating an
+  // EXISTING memory whose stored filename may not match what name->filename
+  // derivation would produce (e.g. legacy/duplicate-named files). Prevents a
+  // rewrite from silently landing in a different/new file.
+  file?: string;
 }
 
 export interface SaveResult {
@@ -58,9 +63,15 @@ export function handleSave(
   // gets the special always-loaded slot + its own cap.
   const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
   const isUserFile = input.type === "usr" && (slug === "user" || slug === "profile");
+  // Honor an exact filename override for updates (sanitized to a bare basename
+  // ending in .md — no path separators / traversal), else derive from the name.
+  const safeOverride =
+    input.file && /^[A-Za-z0-9._-]+\.md$/.test(input.file) && !input.file.includes("..")
+      ? input.file
+      : undefined;
   const filename = isUserFile
     ? config.userMemory.filename
-    : nameToFilename(input.name, input.type);
+    : safeOverride ?? nameToFilename(input.name, input.type);
   // The user profile is scoped to the USER (global), not the project.
   const targetDir = isUserFile && config.userMemory.dir ? config.userMemory.dir : memoryDir;
   if (targetDir !== memoryDir) fs.mkdirSync(targetDir, { recursive: true });

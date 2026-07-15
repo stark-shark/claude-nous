@@ -24371,7 +24371,8 @@ function handleSave(input, memoryDir, config3) {
   const warnings = [];
   const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
   const isUserFile = input.type === "usr" && (slug === "user" || slug === "profile");
-  const filename = isUserFile ? config3.userMemory.filename : nameToFilename(input.name, input.type);
+  const safeOverride = input.file && /^[A-Za-z0-9._-]+\.md$/.test(input.file) && !input.file.includes("..") ? input.file : void 0;
+  const filename = isUserFile ? config3.userMemory.filename : safeOverride ?? nameToFilename(input.name, input.type);
   const targetDir = isUserFile && config3.userMemory.dir ? config3.userMemory.dir : memoryDir;
   if (targetDir !== memoryDir) fs8.mkdirSync(targetDir, { recursive: true });
   const filePath = path6.join(targetDir, filename);
@@ -26757,7 +26758,7 @@ ${m.body}`;
 }
 
 // src/index.ts
-var VERSION = true ? "1.1.2" : "0.0.0-dev";
+var VERSION = true ? "1.1.3" : "0.0.0-dev";
 var _emitWarning = process.emitWarning.bind(process);
 process.emitWarning = ((warning, ...rest) => {
   const msg = typeof warning === "string" ? warning : warning?.message ?? "";
@@ -27091,7 +27092,9 @@ ${text}` }] };
     }
     const memDir = spec.memoryDir || ensureMemoryDir(getCurrentProjectHash(), getProjectsRoot());
     const result = handleSave(
-      { name: spec.name, type: spec.type, description: spec.description, content: spec.content },
+      // Pass the exact source filename so the condense updates the ORIGINAL file,
+      // never a re-derived (possibly different/new) one.
+      { name: spec.name, type: spec.type, description: spec.description, content: spec.content, file: spec.file },
       memDir,
       config2
     );
