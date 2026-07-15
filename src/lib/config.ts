@@ -44,8 +44,12 @@ export interface RecallConfig {
   // agent to delegate a memory review to nous-worker (Haiku).
   review: {
     enabled: boolean;
-    everyNTurns: number;
+    everyNTurns: number;   // interval for the memory-save review
+    rulesInterval: number; // interval for the self-build (RULES/skills) review
     approvalGate: boolean; // require user OK before the review writes memory
+    // "background" = post-turn detached Haiku review that stages proposals;
+    // "nudge" = legacy in-context prompt; "off" = disabled.
+    mode: "background" | "nudge" | "off";
   };
   // The canonical Hermes-style USER.md — always injected at session start, capped.
   // Scoped to the USER (global), not to a project.
@@ -53,10 +57,46 @@ export interface RecallConfig {
     filename: string;  // reserved file the usr-type "user" memory writes to
     alwaysLoad: boolean;
     // Absolute dir the user file lives in. Set at runtime to the global dir
-    // (~/.claude/recall/memory) so the profile is shared across all projects.
+    // (~/.claude/nous/memory) so the profile is shared across all projects.
     // When unset, the user file lives in the current project's memory dir
     // (legacy / test behavior).
     dir?: string;
+  };
+  // v1 cold-tier capture: index every session into SQLite; summarize via headless
+  // Haiku. `summarize`: "auto" = SessionEnd spawns the summarizer; "nudge" = defer
+  // to a next-session delegation; "off" = manual only.
+  capture: {
+    enabled: boolean;
+    summarize: "auto" | "nudge" | "off";
+    minTurns: number;          // skip summarizing trivially short sessions
+    haikuModel: string;
+    maxTranscriptChars: number; // whole-transcript cap for the summarizer input
+    perTurnCap: number;         // a single turn longer than this is truncated first
+    redact: boolean;            // strip secrets/PII before FTS + injection
+    redactExtra: string[];      // user regex additions
+  };
+  // Recall ladder tuning.
+  ladder: {
+    expandWindow: number;   // ± messages around a hit in anchored view
+    bookend: number;        // first/last N messages shown as goal/resolution
+    maxHits: number;
+    rrfK: number;           // reciprocal-rank-fusion constant
+    escalateBelow: number;  // top-hit confidence below which Haiku expansion helps
+  };
+  // Daily digest files (days/YYYY-MM-DD.md), today+yesterday injected.
+  daily: { enabled: boolean; injectDays: number; cap: number };
+  // Self-building save-rules (RULES.md).
+  rules: { enabled: boolean; approvalGate: boolean; maxBackups: number };
+  // Agent-authored procedural skills.
+  skills: { enabled: boolean; approvalGate: boolean; dir: string; maxBackups: number };
+  // Self-maintaining MEMORY.md / user.md.
+  maintain: { autoLowRisk: boolean; gateContentEdits: boolean; gateUserEdits: boolean };
+  // DB retention/maintenance. Session-prune OFF by default (total-recall goal).
+  retention: {
+    vacuum: boolean;
+    vacuumMinIntervalHours: number;
+    pruneSessions: boolean;
+    pruneDays: number;
   };
 }
 
@@ -96,11 +136,45 @@ export const DEFAULT_CONFIG: RecallConfig = {
   review: {
     enabled: true,
     everyNTurns: 10,
+    rulesInterval: 10,
     approvalGate: true,
+    mode: "background",
   },
   userMemory: {
     filename: "user.md",
     alwaysLoad: true,
+  },
+  capture: {
+    enabled: true,
+    summarize: "auto",
+    minTurns: 3,
+    haikuModel: "claude-haiku-4-5",
+    maxTranscriptChars: 60000,
+    perTurnCap: 3000,
+    redact: true,
+    redactExtra: [],
+  },
+  ladder: {
+    expandWindow: 5,
+    bookend: 3,
+    maxHits: 20,
+    rrfK: 60,
+    escalateBelow: 0.15,
+  },
+  daily: { enabled: true, injectDays: 2, cap: 2000 },
+  rules: { enabled: true, approvalGate: true, maxBackups: 20 },
+  skills: {
+    enabled: true,
+    approvalGate: true,
+    dir: "~/.claude/skills",
+    maxBackups: 20,
+  },
+  maintain: { autoLowRisk: true, gateContentEdits: true, gateUserEdits: true },
+  retention: {
+    vacuum: true,
+    vacuumMinIntervalHours: 24,
+    pruneSessions: false,
+    pruneDays: 180,
   },
 };
 
@@ -161,6 +235,34 @@ export function loadConfig(configPath: string): RecallConfig {
     userMemory: {
       ...DEFAULT_CONFIG.userMemory,
       ...(userConfig.userMemory ?? {}),
+    },
+    capture: {
+      ...DEFAULT_CONFIG.capture,
+      ...(userConfig.capture ?? {}),
+    },
+    ladder: {
+      ...DEFAULT_CONFIG.ladder,
+      ...(userConfig.ladder ?? {}),
+    },
+    daily: {
+      ...DEFAULT_CONFIG.daily,
+      ...(userConfig.daily ?? {}),
+    },
+    rules: {
+      ...DEFAULT_CONFIG.rules,
+      ...(userConfig.rules ?? {}),
+    },
+    skills: {
+      ...DEFAULT_CONFIG.skills,
+      ...(userConfig.skills ?? {}),
+    },
+    maintain: {
+      ...DEFAULT_CONFIG.maintain,
+      ...(userConfig.maintain ?? {}),
+    },
+    retention: {
+      ...DEFAULT_CONFIG.retention,
+      ...(userConfig.retention ?? {}),
     },
   };
 }

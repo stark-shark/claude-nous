@@ -26,9 +26,19 @@ import { handleDecode } from "./tools/decode.js";
 import { handleRegistry } from "./tools/registry.js";
 import { handleExport } from "./tools/export.js";
 import { handleImport } from "./tools/import.js";
-import { searchSessions } from "./lib/sessions.js";
+import { searchSessions, searchSessionsDb, getAnchoredView } from "./lib/sessions.js";
 import { runScan, formatReport } from "./lib/curate.js";
 import { migrateFromRecall } from "./lib/migrate.js";
+import { openDb, dbStats, type Db } from "./lib/db.js";
+import { indexAll, indexFile } from "./lib/indexer.js";
+import {
+  buildTranscript,
+  summarizerPrompt,
+  parseSummary,
+  writeSummary,
+  writePlaceholder,
+  pendingSummaries,
+} from "./lib/summarize.js";
 
 // Non-destructive one-time copy of pre-v1 ~/.claude/recall data. Runs before
 // any dir resolution so config/global-memory land in place first.
@@ -81,6 +91,15 @@ const server = new McpServer(
 function getProjectsRoot(): string {
   return path.join(os.homedir(), ".claude", "projects");
 }
+
+// Lazily-opened shared DB handle for the cold tier. Null when node:sqlite is
+// unavailable (Node < 22.5) — callers fall back to the brute-scan cold tier.
+let _db: Db | null | undefined;
+function getDb(): Db | null {
+  if (_db === undefined) _db = openDb();
+  return _db;
+}
+const redactOpts = () => ({ redact: config.capture.redact, redactExtra: config.capture.redactExtra });
 
 // ─── nous_save ───────────────────────────────────────────────
 
@@ -144,27 +163,48 @@ server.registerTool(
   {
     title: "Search Memories",
     description:
-      "Query memories (hot tier, headers only) OR past Claude Code session transcripts (cold tier, full text). " +
-      "scope='memories' (default) searches distilled memory files; scope='sessions' searches raw conversation history — use it for 'did we discuss X?' recall that was never saved as a memory.",
+      "Query memories (hot tier, headers only) OR past Claude Code session transcripts (cold tier, FTS5 full text). " +
+      "scope='memories' (default) searches distilled memory files; scope='sessions' searches raw conversation history — use it for 'did we discuss X?' recall that was never saved as a memory. " +
+      "Sessions scope uses native FTS5 syntax: space = AND, OR for breadth, \"quoted phrases\", prefix* wildcards. " +
+      "The discovery response already includes the top hit's goal + resolution bookends and a window around the match — cite the session_id + date. " +
+      "To pull more of one conversation, pass session_id (+ optional around=<msg id> or full=true) for a scroll/read view. " +
+      "If confidence is low, delegate query expansion to the nous-worker subagent, then re-search.",
     inputSchema: z.object({
-      query: z.string().describe("Search keyword(s); multiple words are ANDed for session scope"),
+      query: z.string().optional().describe("Search terms (FTS5 syntax for sessions scope). Omit when using session_id to scroll/read."),
       type: z.enum(["fb", "proj", "ref", "usr"]).optional().describe("Filter by memory type (memories scope)"),
       project: z.string().optional().describe("Filter by project hash"),
       scope: z.enum(["memories", "sessions"]).optional().describe("Where to search (default: memories)"),
       limit: z.number().optional().describe("Max session matches to return (sessions scope; default 20)"),
+      session_id: z.string().optional().describe("Sessions scope: pull an anchored/full view of this session (scroll/read mode)"),
+      around: z.number().optional().describe("Sessions scope: center the window on this message id (from a prior hit)"),
+      full: z.boolean().optional().describe("Sessions scope: return the whole session transcript"),
     }),
   },
-  async ({ query, type, project, scope, limit }) => {
+  async ({ query, type, project, scope, limit, session_id, around, full }) => {
     if (scope === "sessions") {
-      const result = searchSessions(getProjectsRoot(), { query, project, limit });
-      return { content: [{ type: "text" as const, text: result.text }] };
+      const db = getDb();
+      // Scroll/read mode: an explicit session_id pulls context, no query needed.
+      if (session_id) {
+        if (!db || !db.ftsAvailable) {
+          return { content: [{ type: "text" as const, text: "Cold-tier DB unavailable; scroll/read needs the FTS index." }] };
+        }
+        const view = getAnchoredView(db, session_id, { around, full, window: config.ladder.expandWindow });
+        const body = view.lines.length
+          ? `${view.citation}\n\n${view.lines.join("\n")}`
+          : `No indexed messages for session ${session_id}.`;
+        return { content: [{ type: "text" as const, text: body }] };
+      }
+      const result = db && db.ftsAvailable
+        ? searchSessionsDb(db, { query: query ?? "", project, limit: limit ?? config.ladder.maxHits }, config.ladder.rrfK)
+        : searchSessions(getProjectsRoot(), { query: query ?? "", project, limit });
+      const hint = result.confidence > 0 && result.confidence < config.ladder.escalateBelow
+        ? "\n\n(low confidence — consider delegating query expansion to nous-worker, then re-searching)"
+        : "";
+      return { content: [{ type: "text" as const, text: result.text + hint }] };
     }
     const memoryDirs = readDirs();
-    const result = handleSearch({ query, type, project }, memoryDirs);
-
-    return {
-      content: [{ type: "text" as const, text: result.text }],
-    };
+    const result = handleSearch({ query: query ?? "", type, project }, memoryDirs);
+    return { content: [{ type: "text" as const, text: result.text }] };
   }
 );
 
@@ -178,19 +218,33 @@ server.registerTool(
       "Run health checks: staleness, registry drift, compression, links, duplicates, stats.",
     inputSchema: z.object({
       checks: z
-        .array(z.enum(["stale", "registry", "compression", "links", "duplicates", "stats", "lifecycle", "caps", "all"]))
+        .array(z.enum(["stale", "registry", "compression", "links", "duplicates", "stats", "lifecycle", "caps", "sessions", "all"]))
         .describe("Which checks to run"),
     }),
   },
   async ({ checks }) => {
     const memoryDirs = readDirs();
-    const result = handleCheck({ checks }, memoryDirs, config);
-
-    return {
-      content: [{ type: "text" as const, text: result.text }],
-    };
+    const result = handleCheck({ checks: checks.filter((c) => c !== "sessions") }, memoryDirs, config);
+    let text = result.text;
+    if (checks.includes("sessions") || checks.includes("all")) {
+      text += "\n\n" + formatDbStats();
+    }
+    return { content: [{ type: "text" as const, text }] };
   }
 );
+
+function formatDbStats(): string {
+  const db = getDb();
+  if (!db) return "SESSIONS (cold tier): node:sqlite unavailable (Node < 22.5) — brute-scan fallback active.";
+  const s = dbStats(db);
+  const mb = (s.sizeBytes / 1024 / 1024).toFixed(2);
+  return [
+    "SESSIONS (cold tier):",
+    `  sessions: ${s.sessions} (${s.unsummarized} unsummarized)`,
+    `  messages: ${s.messages}  redacted-hits: ${s.redacted}`,
+    `  db: ${mb} MB  fts5: ${s.ftsAvailable ? "on" : "off"}  last-index: ${s.lastIndex ?? "never"}`,
+  ].join("\n");
+}
 
 // ─── nous_decode ─────────────────────────────────────────────
 
@@ -305,16 +359,99 @@ function runScanCli(): void {
   process.stdout.write(formatReport(report) + "\n");
 }
 
-async function main() {
-  // `--migrate` just triggers the module-load migration (already run above) and
-  // exits — a fast path for hooks/tests to force the recall->nous copy.
-  if (process.argv.includes("--migrate")) {
-    return;
+function argVal(flag: string): string | undefined {
+  const i = process.argv.indexOf(flag);
+  return i >= 0 && i + 1 < process.argv.length ? process.argv[i + 1] : undefined;
+}
+
+async function readStdin(): Promise<string> {
+  try {
+    return await new Promise<string>((resolve) => {
+      let data = "";
+      process.stdin.setEncoding("utf8");
+      process.stdin.on("data", (c) => (data += c));
+      process.stdin.on("end", () => resolve(data));
+      process.stdin.on("error", () => resolve(data));
+    });
+  } catch {
+    return "";
   }
-  if (process.argv.includes("--scan")) {
+}
+
+// CLI dispatch for the capture pipeline (invoked by hooks + commands). Each flag
+// runs and exits without starting the MCP transport.
+async function runCli(): Promise<boolean> {
+  const argv = process.argv;
+
+  if (argv.includes("--migrate")) return true; // migration already ran at load
+  if (argv.includes("--scan")) {
     runScanCli();
-    return;
+    return true;
   }
+
+  if (argv.includes("--db-stats")) {
+    process.stdout.write(formatDbStats() + "\n");
+    return true;
+  }
+
+  if (argv.includes("--index") || argv.includes("--index-file")) {
+    const db = getDb();
+    if (!db) {
+      process.stdout.write("node:sqlite unavailable — cold tier disabled.\n");
+      return true;
+    }
+    const file = argVal("--index-file");
+    if (file) {
+      const r = indexFile(db, file, redactOpts());
+      process.stdout.write(r ? `indexed ${r.inserted} msg (${r.sessionId})\n` : "no new lines\n");
+    } else {
+      const r = indexAll(db, getProjectsRoot(), redactOpts());
+      process.stdout.write(
+        `indexed ${r.messages} msgs across ${r.filesIngested}/${r.filesScanned} files, ${r.sessions} sessions (${r.redacted} redactions)\n`
+      );
+    }
+    return true;
+  }
+
+  if (argv.includes("--pending")) {
+    const db = getDb();
+    if (!db) return true;
+    const ids = pendingSummaries(db, config);
+    process.stdout.write(JSON.stringify(ids) + "\n");
+    return true;
+  }
+
+  // Build the summarizer prompt for a session (hook pipes this to headless Haiku).
+  if (argv.includes("--summarize-prompt")) {
+    const db = getDb();
+    const sid = argVal("--summarize-prompt");
+    if (!db || !sid) return true;
+    process.stdout.write(summarizerPrompt(buildTranscript(db, sid, config)));
+    return true;
+  }
+
+  // Write a summary result (JSON on stdin) back to the DB + daily digest.
+  if (argv.includes("--summarize")) {
+    const db = getDb();
+    const sid = argVal("--summarize");
+    if (!db || !sid) return true;
+    const raw = await readStdin();
+    const parsed = parseSummary(raw);
+    if (parsed) {
+      writeSummary(db, sid, parsed, config.userMemory.dir);
+      process.stdout.write("summary written\n");
+    } else {
+      writePlaceholder(db, sid);
+      process.stdout.write("summary parse failed — placeholder written\n");
+    }
+    return true;
+  }
+
+  return false;
+}
+
+async function main() {
+  if (await runCli()) return;
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("Nous MCP server running on stdio");

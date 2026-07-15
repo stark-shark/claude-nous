@@ -3222,8 +3222,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path17) {
-      let input = path17;
+    function removeDotSegments(path20) {
+      let input = path20;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3422,8 +3422,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path17, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path17 && path17 !== "/" ? path17 : void 0;
+        const [path20, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path20 && path20 !== "/" ? path20 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -6785,12 +6785,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs17, exportName) {
+    function addFormats(ajv, list, fs20, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs17[f]);
+        ajv.addFormat(f, fs20[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -7157,8 +7157,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path17, errorMaps, issueData } = params;
-  const fullPath = [...path17, ...issueData.path || []];
+  const { data, path: path20, errorMaps, issueData } = params;
+  const fullPath = [...path20, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7273,11 +7273,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path17, key) {
+  constructor(parent, value, path20, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path17;
+    this._path = path20;
     this._key = key;
   }
   get path() {
@@ -10921,10 +10921,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path17) {
-  if (!path17)
+function getElementAtPath(obj, path20) {
+  if (!path20)
     return obj;
-  return path17.reduce((acc, key) => acc?.[key], obj);
+  return path20.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11307,11 +11307,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path17, issues) {
+function prefixIssues(path20, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path17);
+    iss.path.unshift(path20);
     return iss;
   });
 }
@@ -23220,8 +23220,8 @@ var StdioServerTransport = class {
 };
 
 // src/index.ts
-import * as path16 from "node:path";
-import * as os3 from "node:os";
+import * as path19 from "node:path";
+import * as os5 from "node:os";
 
 // src/lib/config.ts
 import * as fs from "node:fs";
@@ -23261,11 +23261,45 @@ var DEFAULT_CONFIG = {
   review: {
     enabled: true,
     everyNTurns: 10,
-    approvalGate: true
+    rulesInterval: 10,
+    approvalGate: true,
+    mode: "background"
   },
   userMemory: {
     filename: "user.md",
     alwaysLoad: true
+  },
+  capture: {
+    enabled: true,
+    summarize: "auto",
+    minTurns: 3,
+    haikuModel: "claude-haiku-4-5",
+    maxTranscriptChars: 6e4,
+    perTurnCap: 3e3,
+    redact: true,
+    redactExtra: []
+  },
+  ladder: {
+    expandWindow: 5,
+    bookend: 3,
+    maxHits: 20,
+    rrfK: 60,
+    escalateBelow: 0.15
+  },
+  daily: { enabled: true, injectDays: 2, cap: 2e3 },
+  rules: { enabled: true, approvalGate: true, maxBackups: 20 },
+  skills: {
+    enabled: true,
+    approvalGate: true,
+    dir: "~/.claude/skills",
+    maxBackups: 20
+  },
+  maintain: { autoLowRisk: true, gateContentEdits: true, gateUserEdits: true },
+  retention: {
+    vacuum: true,
+    vacuumMinIntervalHours: 24,
+    pruneSessions: false,
+    pruneDays: 180
   }
 };
 function stripJsoncComments(text) {
@@ -23316,6 +23350,34 @@ function loadConfig(configPath) {
     userMemory: {
       ...DEFAULT_CONFIG.userMemory,
       ...userConfig.userMemory ?? {}
+    },
+    capture: {
+      ...DEFAULT_CONFIG.capture,
+      ...userConfig.capture ?? {}
+    },
+    ladder: {
+      ...DEFAULT_CONFIG.ladder,
+      ...userConfig.ladder ?? {}
+    },
+    daily: {
+      ...DEFAULT_CONFIG.daily,
+      ...userConfig.daily ?? {}
+    },
+    rules: {
+      ...DEFAULT_CONFIG.rules,
+      ...userConfig.rules ?? {}
+    },
+    skills: {
+      ...DEFAULT_CONFIG.skills,
+      ...userConfig.skills ?? {}
+    },
+    maintain: {
+      ...DEFAULT_CONFIG.maintain,
+      ...userConfig.maintain ?? {}
+    },
+    retention: {
+      ...DEFAULT_CONFIG.retention,
+      ...userConfig.retention ?? {}
     }
   };
 }
@@ -25075,6 +25137,72 @@ ${mem.content}
 // src/lib/sessions.ts
 import * as fs14 from "node:fs";
 import * as path13 from "node:path";
+
+// src/lib/fts-query.ts
+var BOOL_OPS = /* @__PURE__ */ new Set(["AND", "OR", "NOT", "NEAR"]);
+var PH_OPEN = String.fromCharCode(1);
+var PH_CLOSE = String.fromCharCode(2);
+function sanitizeFtsQuery(raw) {
+  if (!raw) return "";
+  let q = raw.trim();
+  if (!q) return "";
+  const phrases = [];
+  q = q.replace(/"([^"]*)"/g, (_m, inner) => {
+    phrases.push(inner.trim());
+    return ` ${PH_OPEN}${phrases.length - 1}${PH_CLOSE} `;
+  });
+  q = q.replace(/[(){}:^"+]/g, " ");
+  const out = [];
+  const phRe = new RegExp(`^${PH_OPEN}(\\d+)${PH_CLOSE}$`);
+  for (let tok of q.split(/\s+/).filter(Boolean)) {
+    const ph = tok.match(phRe);
+    if (ph) {
+      const phrase = phrases[Number(ph[1])];
+      if (phrase) out.push(`"${phrase}"`);
+      continue;
+    }
+    const upper = tok.toUpperCase();
+    if (BOOL_OPS.has(upper)) {
+      out.push(upper);
+      continue;
+    }
+    tok = tok.replace(/\*+/g, "*");
+    const prefix = tok.endsWith("*");
+    const core = tok.replace(/\*+$/, "").replace(/^\*+/, "");
+    if (!core) continue;
+    if (/[.\-/@]/.test(core)) {
+      out.push(`"${core}"` + (prefix ? "*" : ""));
+    } else {
+      out.push(prefix ? `${core}*` : core);
+    }
+  }
+  while (out.length && BOOL_OPS.has(out[0])) out.shift();
+  while (out.length && BOOL_OPS.has(out[out.length - 1])) out.pop();
+  return out.join(" ");
+}
+
+// src/lib/rank.ts
+function reciprocalRankFusion(items, rankers, keyOf, k = 60) {
+  const scores = /* @__PURE__ */ new Map();
+  const byKey = /* @__PURE__ */ new Map();
+  for (const item of items) byKey.set(keyOf(item), item);
+  for (const ranker of rankers) {
+    const ordered = ranker(items);
+    ordered.forEach((item, rank) => {
+      const key = keyOf(item);
+      scores.set(key, (scores.get(key) ?? 0) + 1 / (k + rank));
+    });
+  }
+  return [...scores.entries()].map(([key, score]) => ({ item: byKey.get(key), score })).sort((a, b) => b.score - a.score);
+}
+function topConfidence(fused, rankerCount, k = 60) {
+  if (fused.length === 0) return 0;
+  const max = rankerCount * (1 / k);
+  if (max <= 0) return 0;
+  return Math.min(1, fused[0].score / max);
+}
+
+// src/lib/sessions.ts
 function extractText(message) {
   if (!message || typeof message !== "object") return "";
   const content = message.content;
@@ -25089,6 +25217,150 @@ function extractText(message) {
   }
   return parts.join(" ");
 }
+function clip(s, max) {
+  const one = (s || "").replace(/\s+/g, " ").trim();
+  return one.length > max ? one.slice(0, max - 1) + "\u2026" : one;
+}
+var DEMOTED_SOURCES = /* @__PURE__ */ new Set(["cron"]);
+var HIDDEN_SOURCES = /* @__PURE__ */ new Set(["subagent", "tool"]);
+function searchSessionsDb(db, input, k = 60) {
+  const limit = input.limit ?? 20;
+  const match = sanitizeFtsQuery(input.query);
+  if (!match) return { matches: [], text: "Empty query.", confidence: 0, engine: "fts" };
+  const params = [match];
+  let sql = "SELECT f.message_id AS mid, f.session_id AS sid, m.project AS project, m.role AS role, m.ts AS ts, snippet(messages_fts, 0, '\xAB', '\xBB', '\u2026', 12) AS snip, bm25(messages_fts) AS rank, COALESCE(s.source,'interactive') AS source FROM messages_fts f JOIN messages m ON m.id = f.message_id LEFT JOIN sessions s ON s.session_id = f.session_id WHERE messages_fts MATCH ? ";
+  if (input.project) {
+    sql += "AND m.project = ? ";
+    params.push(input.project);
+  }
+  sql += "ORDER BY rank LIMIT ?";
+  params.push(limit * 5);
+  let rows;
+  try {
+    rows = db.raw.prepare(sql).all(...params);
+  } catch {
+    return { matches: [], text: `Cold-tier query failed for '${input.query}'.`, confidence: 0, engine: "fts" };
+  }
+  const hits = rows.filter((r) => !HIDDEN_SOURCES.has(r.source));
+  if (hits.length === 0) {
+    return {
+      matches: [],
+      text: `No past sessions mention '${input.query}'.`,
+      confidence: 0,
+      engine: "fts"
+    };
+  }
+  const fused = reciprocalRankFusion(
+    hits,
+    [
+      (items) => [...items].sort((a, b) => a.rank - b.rank),
+      // bm25 best-first
+      (items) => [...items].sort((a, b) => a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0)
+      // recent-first
+    ],
+    (h) => String(h.mid),
+    k
+  );
+  for (const f of fused) if (DEMOTED_SOURCES.has(f.item.source)) f.score *= 0.4;
+  fused.sort((a, b) => b.score - a.score);
+  const confidence = topConfidence(fused, 2, k);
+  const top = fused.slice(0, limit).map((f) => f.item);
+  const matches = top.map((h) => ({
+    project: h.project,
+    sessionId: h.sid,
+    role: h.role,
+    ts: h.ts ? h.ts.slice(0, 19) : "",
+    snippet: clip(h.snip, 200),
+    messageId: h.mid
+  }));
+  const text = formatDiscovery(db, input.query, confidence, top);
+  return { matches, text, confidence, engine: "fts" };
+}
+function formatDiscovery(db, query, confidence, hits) {
+  if (hits.length === 0) return `No past sessions mention '${query}'.`;
+  const pct = Math.round(confidence * 100);
+  const lines = [
+    `${hits.length} past-session match${hits.length === 1 ? "" : "es"} for '${query}' (confidence ${pct}%):`,
+    ""
+  ];
+  const top = hits[0];
+  const be = bookends(db, top.sid, 3);
+  const win = getAnchoredView(db, top.sid, { around: top.mid, window: 3 });
+  const dateRange = sessionDateRange(db, top.sid);
+  lines.push(`\u25B8 Top \u2014 session ${top.sid.slice(0, 8)} @ ${top.project}  [${dateRange}]`);
+  if (be.start.length) {
+    lines.push("  goal:");
+    for (const l of be.start) lines.push("    " + l);
+  }
+  if (win.lines.length) {
+    lines.push("  around match:");
+    for (const l of win.lines) lines.push("    " + l);
+  }
+  if (be.end.length) {
+    lines.push("  resolution:");
+    for (const l of be.end) lines.push("    " + l);
+  }
+  if (hits.length > 1) {
+    lines.push("", "Other matches:");
+    for (const h of hits.slice(1)) {
+      lines.push(
+        `- [${h.ts ? h.ts.slice(0, 19) : "?"}] ${h.role} @ ${h.project}/${h.sid.slice(0, 8)} (msg ${h.mid}) \u2014 ${clip(h.snip, 160)}`
+      );
+    }
+  }
+  lines.push(
+    "",
+    'To pull more: nous_search scope:"sessions" with session_id:"<id>" [around:<msg>] [full:true]'
+  );
+  return lines.join("\n");
+}
+function sessionRows(db, sessionId) {
+  try {
+    return db.raw.prepare("SELECT id, role, ts, content FROM messages WHERE session_id=? ORDER BY id").all(sessionId);
+  } catch {
+    return [];
+  }
+}
+function getAnchoredView(db, sessionId, opts = {}) {
+  const rows = sessionRows(db, sessionId);
+  const citation = `session ${sessionId.slice(0, 8)} @ ${sessionDateRange(db, sessionId)}`;
+  if (rows.length === 0) return { citation, lines: [] };
+  let slice;
+  if (opts.full) {
+    slice = rows;
+  } else {
+    const window = opts.window ?? 5;
+    let idx = 0;
+    if (opts.around != null) {
+      const found = rows.findIndex((r) => r.id === opts.around);
+      idx = found >= 0 ? found : 0;
+    }
+    slice = rows.slice(Math.max(0, idx - window), idx + window + 1);
+  }
+  const lines = slice.map(
+    (r) => `[${r.ts ? r.ts.slice(0, 19) : "?"}] ${r.role}: ${clip(r.content, 220)}`
+  );
+  return { citation, lines };
+}
+function bookends(db, sessionId, n = 3) {
+  const rows = sessionRows(db, sessionId);
+  if (rows.length === 0) return { start: [], end: [] };
+  const fmt = (r) => `[${r.ts ? r.ts.slice(0, 19) : "?"}] ${r.role}: ${clip(r.content, 160)}`;
+  const start = rows.slice(0, n).map(fmt);
+  const end = rows.length > n ? rows.slice(-n).map(fmt) : [];
+  return { start, end };
+}
+function sessionDateRange(db, sessionId) {
+  try {
+    const row = db.raw.prepare("SELECT started, ended FROM sessions WHERE session_id=?").get(sessionId);
+    const s = row && typeof row.started === "string" ? row.started.slice(0, 10) : "";
+    const e = row && typeof row.ended === "string" ? row.ended.slice(0, 10) : "";
+    if (s && e && s !== e) return `${s} \u2192 ${e}`;
+    return s || e || "?";
+  } catch {
+    return "?";
+  }
+}
 function snippetAround(text, terms, width = 160) {
   const lower = text.toLowerCase();
   let idx = -1;
@@ -25099,17 +25371,22 @@ function snippetAround(text, terms, width = 160) {
   if (idx === -1) idx = 0;
   const start = Math.max(0, idx - width / 2);
   const end = Math.min(text.length, idx + width / 2);
-  const clip = text.slice(start, end).replace(/\s+/g, " ").trim();
-  return (start > 0 ? "\u2026" : "") + clip + (end < text.length ? "\u2026" : "");
+  const clipped = text.slice(start, end).replace(/\s+/g, " ").trim();
+  return (start > 0 ? "\u2026" : "") + clipped + (end < text.length ? "\u2026" : "");
 }
-function searchSessions(projectsRoot, input) {
+function searchSessionsBrute(projectsRoot, input) {
   const limit = input.limit ?? 20;
   const terms = input.query.toLowerCase().split(/\s+/).filter(Boolean);
   const matches = [];
   if (!fs14.existsSync(projectsRoot) || terms.length === 0) {
-    return { matches, text: terms.length === 0 ? "Empty query." : "No sessions found." };
+    return {
+      matches,
+      text: terms.length === 0 ? "Empty query." : "No sessions found.",
+      confidence: 0,
+      engine: "brute"
+    };
   }
-  const projectDirs = fs14.readdirSync(projectsRoot).filter((name) => !input.project || name === input.project);
+  const projectDirs = fs14.readdirSync(projectsRoot).filter((n) => !input.project || n === input.project);
   outer: for (const project of projectDirs) {
     const dir = path13.join(projectsRoot, project);
     let files;
@@ -25153,10 +25430,12 @@ function searchSessions(projectsRoot, input) {
   }
   matches.sort((a, b) => a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0);
   const top = matches.slice(0, limit);
-  const text = top.length === 0 ? `No past sessions mention '${input.query}'.` : top.map(
-    (m) => `- [${m.ts || "?"}] ${m.role} @ ${m.project}/${m.sessionId.slice(0, 8)} \u2014 ${m.snippet}`
-  ).join("\n");
-  return { matches: top, text };
+  const text = top.length === 0 ? `No past sessions mention '${input.query}'.` : top.map((m) => `- [${m.ts || "?"}] ${m.role} @ ${m.project}/${m.sessionId.slice(0, 8)} \u2014 ${m.snippet}`).join("\n");
+  return { matches: top, text, confidence: top.length ? 0.5 : 0, engine: "brute" };
+}
+function searchSessions(projectsRoot, input, db) {
+  if (db && db.ftsAvailable) return searchSessionsDb(db, input);
+  return searchSessionsBrute(projectsRoot, input);
 }
 
 // src/lib/curate.ts
@@ -25310,11 +25589,678 @@ function migrateFromRecall(legacyDir = LEGACY_DIR, nousDir = NOUS_DIR, marker = 
   return result;
 }
 
+// src/lib/db.ts
+import * as fs17 from "node:fs";
+import * as path16 from "node:path";
+import * as os3 from "node:os";
+import { createRequire } from "node:module";
+var nodeRequire = createRequire(import.meta.url);
+var SCHEMA_VERSION = 1;
+var sqliteMod;
+function loadSqlite() {
+  if (sqliteMod !== void 0) return sqliteMod;
+  try {
+    sqliteMod = nodeRequire("node:sqlite");
+  } catch {
+    sqliteMod = null;
+  }
+  return sqliteMod;
+}
+function getDefaultDbPath() {
+  return path16.join(os3.homedir(), ".claude", "nous", "nous.db");
+}
+function applyPragmas(db) {
+  try {
+    const row = db.prepare("PRAGMA journal_mode=WAL").get();
+    const mode = row && typeof row.journal_mode === "string" ? row.journal_mode : "";
+    if (mode.toLowerCase() !== "wal") {
+      try {
+        db.exec("PRAGMA journal_mode=DELETE");
+      } catch {
+      }
+    }
+  } catch {
+  }
+  try {
+    db.exec("PRAGMA busy_timeout=5000");
+    db.exec("PRAGMA synchronous=NORMAL");
+  } catch {
+  }
+}
+function probeFts5(db) {
+  try {
+    db.exec("CREATE VIRTUAL TABLE IF NOT EXISTS temp._nous_fts5_probe USING fts5(x)");
+    db.exec("DROP TABLE IF EXISTS temp._nous_fts5_probe");
+    return true;
+  } catch {
+    return false;
+  }
+}
+var BASE_SCHEMA = `
+CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
+
+CREATE TABLE IF NOT EXISTS files (
+  path TEXT PRIMARY KEY,
+  mtime INTEGER,
+  size INTEGER,
+  last_offset INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  session_id TEXT PRIMARY KEY,
+  project TEXT,
+  cwd TEXT,
+  source TEXT,
+  parent_session_id TEXT,
+  started TEXT,
+  ended TEXT,
+  turns INTEGER DEFAULT 0,
+  summary TEXT,
+  decisions TEXT,
+  open_threads TEXT,
+  summarized_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project);
+CREATE INDEX IF NOT EXISTS idx_sessions_ended ON sessions(ended);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT,
+  project TEXT,
+  role TEXT,
+  ts TEXT,
+  turn_idx INTEGER,
+  content TEXT,
+  redacted INTEGER DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, id);
+`;
+var FTS_SCHEMA = `
+CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
+  content,
+  session_id UNINDEXED,
+  message_id UNINDEXED,
+  tokenize='unicode61'
+);
+CREATE TRIGGER IF NOT EXISTS messages_ai AFTER INSERT ON messages BEGIN
+  INSERT INTO messages_fts(rowid, content, session_id, message_id)
+  VALUES (new.id, new.content, new.session_id, new.id);
+END;
+CREATE TRIGGER IF NOT EXISTS messages_ad AFTER DELETE ON messages BEGIN
+  DELETE FROM messages_fts WHERE rowid = old.id;
+END;
+CREATE TRIGGER IF NOT EXISTS messages_au AFTER UPDATE ON messages BEGIN
+  DELETE FROM messages_fts WHERE rowid = old.id;
+  INSERT INTO messages_fts(rowid, content, session_id, message_id)
+  VALUES (new.id, new.content, new.session_id, new.id);
+END;
+`;
+var EXPECTED_COLUMNS = {
+  sessions: {
+    session_id: "TEXT",
+    project: "TEXT",
+    cwd: "TEXT",
+    source: "TEXT",
+    parent_session_id: "TEXT",
+    started: "TEXT",
+    ended: "TEXT",
+    turns: "INTEGER DEFAULT 0",
+    summary: "TEXT",
+    decisions: "TEXT",
+    open_threads: "TEXT",
+    summarized_at: "TEXT"
+  },
+  messages: {
+    session_id: "TEXT",
+    project: "TEXT",
+    role: "TEXT",
+    ts: "TEXT",
+    turn_idx: "INTEGER",
+    content: "TEXT",
+    redacted: "INTEGER DEFAULT 0"
+  }
+};
+function reconcileColumns(db) {
+  for (const [table, cols] of Object.entries(EXPECTED_COLUMNS)) {
+    let existing;
+    try {
+      const rows = db.prepare(`PRAGMA table_info(${table})`).all();
+      if (rows.length === 0) continue;
+      existing = new Set(rows.map((r) => String(r.name)));
+    } catch {
+      continue;
+    }
+    for (const [name, ddl] of Object.entries(cols)) {
+      if (!existing.has(name)) {
+        try {
+          db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${ddl}`);
+        } catch {
+        }
+      }
+    }
+  }
+}
+function getSchemaVersion(db) {
+  try {
+    const row = db.prepare("SELECT value FROM meta WHERE key='schema_version'").get();
+    const v = row && typeof row.value === "string" ? parseInt(row.value, 10) : 0;
+    return Number.isFinite(v) ? v : 0;
+  } catch {
+    return 0;
+  }
+}
+function setSchemaVersion(db, v) {
+  db.prepare("INSERT INTO meta(key,value) VALUES('schema_version',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(String(v));
+}
+function rebuildFts(db) {
+  db.exec("DELETE FROM messages_fts");
+  db.exec(
+    "INSERT INTO messages_fts(rowid, content, session_id, message_id) SELECT id, content, session_id, id FROM messages"
+  );
+}
+function installFts(db) {
+  try {
+    db.exec(FTS_SCHEMA);
+    return true;
+  } catch {
+    try {
+      db.exec("DROP TABLE IF EXISTS messages_fts");
+      db.exec("DROP TRIGGER IF EXISTS messages_ai");
+      db.exec("DROP TRIGGER IF EXISTS messages_ad");
+      db.exec("DROP TRIGGER IF EXISTS messages_au");
+      db.exec(FTS_SCHEMA);
+      rebuildFts(db);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+function migrate(db, ftsAvailable) {
+  db.exec(BASE_SCHEMA);
+  reconcileColumns(db);
+  let ftsOk = false;
+  if (ftsAvailable) ftsOk = installFts(db);
+  const current = getSchemaVersion(db);
+  if (current < SCHEMA_VERSION) {
+    setSchemaVersion(db, SCHEMA_VERSION);
+  }
+  return ftsOk;
+}
+function openDb(dbPath = getDefaultDbPath()) {
+  const mod = loadSqlite();
+  if (!mod) return null;
+  try {
+    fs17.mkdirSync(path16.dirname(dbPath), { recursive: true });
+  } catch {
+  }
+  let raw;
+  try {
+    raw = new mod.DatabaseSync(dbPath);
+  } catch {
+    return null;
+  }
+  applyPragmas(raw);
+  const ftsProbed = probeFts5(raw);
+  let ftsAvailable = false;
+  try {
+    ftsAvailable = migrate(raw, ftsProbed);
+  } catch {
+    try {
+      raw.close();
+    } catch {
+    }
+    return null;
+  }
+  return {
+    raw,
+    ftsAvailable,
+    path: dbPath,
+    close() {
+      try {
+        raw.close();
+      } catch {
+      }
+    }
+  };
+}
+function dbStats(db) {
+  const num = (sql) => {
+    try {
+      const row = db.raw.prepare(sql).get();
+      const v = row ? Object.values(row)[0] : 0;
+      return typeof v === "number" ? v : Number(v ?? 0);
+    } catch {
+      return 0;
+    }
+  };
+  let sizeBytes = 0;
+  try {
+    sizeBytes = fs17.statSync(db.path).size;
+  } catch {
+  }
+  let lastIndex = null;
+  try {
+    const row = db.raw.prepare("SELECT value FROM meta WHERE key='last_index'").get();
+    lastIndex = row && typeof row.value === "string" ? row.value : null;
+  } catch {
+  }
+  return {
+    sessions: num("SELECT COUNT(*) FROM sessions"),
+    messages: num("SELECT COUNT(*) FROM messages"),
+    unsummarized: num("SELECT COUNT(*) FROM sessions WHERE summarized_at IS NULL"),
+    redacted: num("SELECT COALESCE(SUM(redacted),0) FROM messages"),
+    sizeBytes,
+    ftsAvailable: db.ftsAvailable,
+    lastIndex
+  };
+}
+function setMeta(db, key, value) {
+  try {
+    db.raw.prepare("INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(key, value);
+  } catch {
+  }
+}
+
+// src/lib/indexer.ts
+import * as fs18 from "node:fs";
+import * as path17 from "node:path";
+
+// src/lib/redact.ts
+import { createHash as createHash2 } from "node:crypto";
+var SALT = "nous:redact:v1";
+function fingerprint(secret) {
+  return createHash2("sha256").update(SALT).update(secret).digest("hex").slice(0, 8);
+}
+var PATTERNS = [
+  {
+    type: "private-key",
+    re: /-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----[\s\S]*?-----END (?:[A-Z ]+ )?PRIVATE KEY-----/g
+  },
+  { type: "aws-akid", re: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g },
+  { type: "gh-token", re: /\bgh[pousr]_[A-Za-z0-9]{36,}\b/g },
+  { type: "anthropic-key", re: /\bsk-ant-[A-Za-z0-9\-_]{20,}\b/g },
+  { type: "openai-key", re: /\bsk-(?:proj-)?[A-Za-z0-9]{20,}\b/g },
+  { type: "google-key", re: /\bAIza[0-9A-Za-z\-_]{35}\b/g },
+  { type: "slack-token", re: /\bxox[baprs]-[0-9A-Za-z-]{10,}\b/g },
+  {
+    type: "jwt",
+    re: /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g
+  },
+  { type: "bearer", re: /\bBearer\s+[A-Za-z0-9._\-]{20,}/g },
+  // user:pass@host connection strings — redact the password group only
+  { type: "conn-pass", re: /(\b[a-z][a-z0-9+.-]*:\/\/[^:@\s/]+:)([^@\s/]{3,})(@)/gi, group: 2 },
+  // key = value / key: value assignments — redact the value group only
+  {
+    type: "assignment",
+    re: /\b(passwd|password|pwd|secret|api[_-]?key|apikey|access[_-]?key|auth[_-]?token|token|client[_-]?secret)\b\s*[:=]\s*['"]?([^\s'"]{6,})['"]?/gi,
+    group: 2
+  }
+];
+function applyPattern(text, p) {
+  let hits = 0;
+  p.re.lastIndex = 0;
+  const out = text.replace(p.re, (...args) => {
+    const match = args[0];
+    if (p.group && typeof args[p.group] === "string") {
+      const secret = args[p.group];
+      hits++;
+      return match.replace(secret, `[REDACTED:${p.type}:${fingerprint(secret)}]`);
+    }
+    hits++;
+    return `[REDACTED:${p.type}:${fingerprint(match)}]`;
+  });
+  return { text: out, hits };
+}
+function compileExtra(extra) {
+  if (!extra || extra.length === 0) return [];
+  const out = [];
+  for (const src of extra) {
+    try {
+      out.push({ type: "custom", re: new RegExp(src, "g") });
+    } catch {
+    }
+  }
+  return out;
+}
+function redact(text, extra) {
+  if (!text) return { text: text ?? "", count: 0 };
+  let out = text;
+  let count = 0;
+  for (const p of [...PATTERNS, ...compileExtra(extra)]) {
+    const r = applyPattern(out, p);
+    out = r.text;
+    count += r.hits;
+  }
+  return { text: out, count };
+}
+var REDACT_TYPES = PATTERNS.map((p) => p.type);
+
+// src/lib/indexer.ts
+function inferSource(obj) {
+  if (obj.isSidechain === true) return "subagent";
+  const ut = typeof obj.userType === "string" ? obj.userType : "";
+  if (ut === "cron" || ut === "scheduled") return "cron";
+  return "interactive";
+}
+function indexFile(db, filePath, opts = {}) {
+  let stat;
+  try {
+    stat = fs18.statSync(filePath);
+    if (!stat.isFile()) return null;
+  } catch {
+    return null;
+  }
+  if (!filePath.endsWith(".jsonl")) return null;
+  const sessionId = path17.basename(filePath, ".jsonl");
+  const project = path17.basename(path17.dirname(filePath));
+  const mtimeMs = Math.floor(stat.mtimeMs);
+  const size = stat.size;
+  const fileRow = db.raw.prepare("SELECT mtime, size, last_offset FROM files WHERE path=?").get(filePath);
+  if (fileRow && fileRow.mtime === mtimeMs && fileRow.size === size) return null;
+  let startOffset = fileRow ? fileRow.last_offset : 0;
+  let truncated = false;
+  if (fileRow && size < fileRow.last_offset) {
+    truncated = true;
+    startOffset = 0;
+  }
+  let buf;
+  try {
+    buf = fs18.readFileSync(filePath);
+  } catch {
+    return null;
+  }
+  const slice = buf.subarray(Math.min(startOffset, buf.length));
+  const text = slice.toString("utf8");
+  const lastNl = text.lastIndexOf("\n");
+  if (lastNl === -1) {
+    upsertFileRow(db, filePath, mtimeMs, size, startOffset);
+    return null;
+  }
+  const complete = text.slice(0, lastNl);
+  const consumed = Buffer.byteLength(complete, "utf8") + 1;
+  const newOffset = startOffset + consumed;
+  const doRedact = opts.redact !== false;
+  const insertMsg = db.raw.prepare(
+    "INSERT INTO messages(session_id,project,role,ts,turn_idx,content,redacted) VALUES(?,?,?,?,?,?,?)"
+  );
+  let inserted = 0;
+  let redactedTotal = 0;
+  let turnIdx = 0;
+  try {
+    const row = db.raw.prepare("SELECT COALESCE(MAX(turn_idx),-1) AS m FROM messages WHERE session_id=?").get(sessionId);
+    turnIdx = row ? Number(row.m) + 1 : 0;
+  } catch {
+    turnIdx = 0;
+  }
+  let cwd = "";
+  let source = "interactive";
+  try {
+    db.raw.exec("BEGIN IMMEDIATE");
+    if (truncated) {
+      db.raw.prepare("DELETE FROM messages WHERE session_id=?").run(sessionId);
+      turnIdx = 0;
+    }
+    for (const line of complete.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      let obj;
+      try {
+        obj = JSON.parse(trimmed);
+      } catch {
+        continue;
+      }
+      const t = obj.type;
+      if (t !== "user" && t !== "assistant") continue;
+      if (typeof obj.cwd === "string" && obj.cwd) cwd = obj.cwd;
+      source = inferSource(obj);
+      let content = extractText(obj.message);
+      if (!content) continue;
+      let redCount = 0;
+      if (doRedact) {
+        const r = redact(content, opts.redactExtra);
+        content = r.text;
+        redCount = r.count;
+      }
+      redactedTotal += redCount;
+      const ts = typeof obj.timestamp === "string" ? obj.timestamp : "";
+      insertMsg.run(sessionId, project, t, ts, turnIdx, content, redCount > 0 ? redCount : 0);
+      if (t === "user") turnIdx++;
+      inserted++;
+    }
+    db.raw.prepare(
+      "INSERT INTO sessions(session_id,project,cwd,source) VALUES(?,?,?,?) ON CONFLICT(session_id) DO UPDATE SET project=excluded.project, cwd=COALESCE(NULLIF(excluded.cwd,''), sessions.cwd), source=excluded.source"
+    ).run(sessionId, project, cwd, source);
+    db.raw.prepare(
+      "UPDATE sessions SET started=(SELECT MIN(ts) FROM messages WHERE session_id=? AND ts<>''), ended=(SELECT MAX(ts) FROM messages WHERE session_id=? AND ts<>''), turns=(SELECT COUNT(*) FROM messages WHERE session_id=? AND role='user') WHERE session_id=?"
+    ).run(sessionId, sessionId, sessionId, sessionId);
+    upsertFileRowTx(db, filePath, mtimeMs, size, newOffset);
+    db.raw.exec("COMMIT");
+  } catch {
+    try {
+      db.raw.exec("ROLLBACK");
+    } catch {
+    }
+    return null;
+  }
+  try {
+    setMeta(db, "last_index", (/* @__PURE__ */ new Date()).toISOString());
+  } catch {
+  }
+  if (inserted === 0) return null;
+  return { sessionId, project, inserted, redacted: redactedTotal };
+}
+function upsertFileRow(db, p, mtime, size, offset) {
+  try {
+    db.raw.exec("BEGIN IMMEDIATE");
+    upsertFileRowTx(db, p, mtime, size, offset);
+    db.raw.exec("COMMIT");
+  } catch {
+    try {
+      db.raw.exec("ROLLBACK");
+    } catch {
+    }
+  }
+}
+function upsertFileRowTx(db, p, mtime, size, offset) {
+  db.raw.prepare(
+    "INSERT INTO files(path,mtime,size,last_offset) VALUES(?,?,?,?) ON CONFLICT(path) DO UPDATE SET mtime=excluded.mtime, size=excluded.size, last_offset=excluded.last_offset"
+  ).run(p, mtime, size, offset);
+}
+function indexAll(db, projectsRoot, opts = {}) {
+  const out = {
+    filesScanned: 0,
+    filesIngested: 0,
+    messages: 0,
+    redacted: 0,
+    sessions: 0
+  };
+  let projectDirs;
+  try {
+    projectDirs = fs18.readdirSync(projectsRoot);
+  } catch {
+    return out;
+  }
+  const touchedSessions = /* @__PURE__ */ new Set();
+  for (const proj of projectDirs) {
+    const dir = path17.join(projectsRoot, proj);
+    let files;
+    try {
+      if (!fs18.statSync(dir).isDirectory()) continue;
+      files = fs18.readdirSync(dir).filter((f) => f.endsWith(".jsonl"));
+    } catch {
+      continue;
+    }
+    for (const f of files) {
+      out.filesScanned++;
+      const res = indexFile(db, path17.join(dir, f), opts);
+      if (res) {
+        out.filesIngested++;
+        out.messages += res.inserted;
+        out.redacted += res.redacted;
+        touchedSessions.add(res.sessionId);
+      }
+    }
+  }
+  out.sessions = touchedSessions.size;
+  return out;
+}
+
+// src/lib/daily.ts
+import * as fs19 from "node:fs";
+import * as path18 from "node:path";
+import * as os4 from "node:os";
+function daysDir(base) {
+  const memory = base ?? path18.join(os4.homedir(), ".claude", "nous", "memory");
+  return path18.join(memory, "days");
+}
+function appendDigest(date4, entry, base) {
+  const dir = daysDir(base);
+  try {
+    fs19.mkdirSync(dir, { recursive: true });
+  } catch {
+  }
+  const file2 = path18.join(dir, `${date4}.md`);
+  const sid = entry.sessionId.slice(0, 8);
+  try {
+    if (fs19.existsSync(file2) && fs19.readFileSync(file2, "utf8").includes(`<!--session:${sid}-->`)) {
+      return;
+    }
+  } catch {
+  }
+  const lines = [];
+  if (!fs19.existsSync(file2)) lines.push(`# ${date4}`, "");
+  lines.push(`## ${entry.project} \xB7 ${sid} <!--session:${sid}-->`);
+  if (entry.summary) lines.push(entry.summary.trim());
+  if (entry.decisions?.length) {
+    lines.push("", "**Decisions:**");
+    for (const d of entry.decisions) lines.push(`- ${d}`);
+  }
+  if (entry.openThreads?.length) {
+    lines.push("", "**Open threads:**");
+    for (const t of entry.openThreads) lines.push(`- ${t}`);
+  }
+  lines.push("");
+  try {
+    fs19.appendFileSync(file2, (fs19.existsSync(file2) ? "\n" : "") + lines.join("\n"), "utf8");
+  } catch {
+  }
+}
+
+// src/lib/summarize.ts
+function capTurn(content, cap) {
+  if (content.length <= cap) return content;
+  const head = content.slice(0, 1500);
+  const tail = content.slice(-500);
+  return `${head}
+\u2026[${content.length - 2e3} chars truncated]\u2026
+${tail}`;
+}
+function buildTranscript(db, sessionId, cfg) {
+  let rows;
+  try {
+    rows = db.raw.prepare("SELECT role, ts, content FROM messages WHERE session_id=? ORDER BY id").all(sessionId);
+  } catch {
+    return "";
+  }
+  const capped = rows.map((r) => ({
+    role: r.role,
+    text: capTurn(r.content ?? "", cfg.capture.perTurnCap)
+  }));
+  const total = cfg.capture.maxTranscriptChars;
+  const kept = [];
+  let used = 0;
+  for (let i = capped.length - 1; i >= 0; i--) {
+    const line = `${capped[i].role}: ${capped[i].text}`;
+    if (used + line.length > total && kept.length > 0) break;
+    kept.unshift(line);
+    used += line.length;
+  }
+  return kept.join("\n\n");
+}
+function summarizerPrompt(transcript) {
+  return 'You are summarizing one Claude Code session for a durable memory index. Read the transcript and reply with ONLY a JSON object, no prose, no code fence:\n{"summary": string, "decisions": string[], "open_threads": string[]}\n- summary: 2-4 sentences \u2014 what the session was about and what got done.\n- decisions: concrete choices made (empty array if none).\n- open_threads: unfinished work / next steps (empty array if none).\nBe specific: keep file names, identifiers, numbers verbatim.\n\nTRANSCRIPT:\n' + transcript;
+}
+function parseSummary(raw) {
+  if (!raw) return null;
+  let text = raw.trim();
+  const fence2 = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence2) text = fence2[1].trim();
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end < start) return null;
+  try {
+    const obj = JSON.parse(text.slice(start, end + 1));
+    return {
+      summary: typeof obj.summary === "string" ? obj.summary : "",
+      decisions: Array.isArray(obj.decisions) ? obj.decisions.filter((x) => typeof x === "string") : [],
+      open_threads: Array.isArray(obj.open_threads) ? obj.open_threads.filter((x) => typeof x === "string") : []
+    };
+  } catch {
+    return null;
+  }
+}
+function sessionDate(db, sessionId) {
+  try {
+    const row = db.raw.prepare("SELECT ended, started, project FROM sessions WHERE session_id=?").get(sessionId);
+    const iso = row?.ended || row?.started || (/* @__PURE__ */ new Date()).toISOString();
+    return iso.slice(0, 10);
+  } catch {
+    return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  }
+}
+function writeSummary(db, sessionId, result, memoryBase) {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  let project = "";
+  try {
+    const row = db.raw.prepare("SELECT project FROM sessions WHERE session_id=?").get(sessionId);
+    project = row?.project || "";
+  } catch {
+  }
+  try {
+    db.raw.prepare(
+      "UPDATE sessions SET summary=?, decisions=?, open_threads=?, summarized_at=? WHERE session_id=?"
+    ).run(
+      result.summary,
+      JSON.stringify(result.decisions),
+      JSON.stringify(result.open_threads),
+      now,
+      sessionId
+    );
+  } catch {
+  }
+  appendDigest(
+    sessionDate(db, sessionId),
+    {
+      sessionId,
+      project,
+      summary: result.summary,
+      decisions: result.decisions,
+      openThreads: result.open_threads
+    },
+    memoryBase
+  );
+}
+function writePlaceholder(db, sessionId) {
+  try {
+    db.raw.prepare("UPDATE sessions SET summary=?, summarized_at=? WHERE session_id=? AND summarized_at IS NULL").run("[summarization failed]", (/* @__PURE__ */ new Date()).toISOString(), sessionId);
+  } catch {
+  }
+}
+function pendingSummaries(db, cfg) {
+  try {
+    const rows = db.raw.prepare("SELECT session_id FROM sessions WHERE summarized_at IS NULL AND turns >= ? ORDER BY ended DESC").all(cfg.capture.minTurns);
+    return rows.map((r) => String(r.session_id));
+  } catch {
+    return [];
+  }
+}
+
 // src/index.ts
 var VERSION = typeof __NOUS_VERSION__ === "string" ? __NOUS_VERSION__ : "0.0.0-dev";
 migrateFromRecall();
-var SERVER_DIR = path16.join(os3.homedir(), ".claude", "nous");
-var CONFIG_PATH = path16.join(SERVER_DIR, "nous.config.jsonc");
+var SERVER_DIR = path19.join(os5.homedir(), ".claude", "nous");
+var CONFIG_PATH = path19.join(SERVER_DIR, "nous.config.jsonc");
 var config2 = loadConfig(CONFIG_PATH);
 var GLOBAL_MEMORY_DIR = ensureGlobalMemoryDir();
 config2.userMemory.dir = GLOBAL_MEMORY_DIR;
@@ -25350,8 +26296,14 @@ var server = new McpServer(
   }
 );
 function getProjectsRoot() {
-  return path16.join(os3.homedir(), ".claude", "projects");
+  return path19.join(os5.homedir(), ".claude", "projects");
 }
+var _db;
+function getDb() {
+  if (_db === void 0) _db = openDb();
+  return _db;
+}
+var redactOpts = () => ({ redact: config2.capture.redact, redactExtra: config2.capture.redactExtra });
 server.registerTool(
   "nous_save",
   {
@@ -25399,25 +26351,38 @@ server.registerTool(
   "nous_search",
   {
     title: "Search Memories",
-    description: "Query memories (hot tier, headers only) OR past Claude Code session transcripts (cold tier, full text). scope='memories' (default) searches distilled memory files; scope='sessions' searches raw conversation history \u2014 use it for 'did we discuss X?' recall that was never saved as a memory.",
+    description: `Query memories (hot tier, headers only) OR past Claude Code session transcripts (cold tier, FTS5 full text). scope='memories' (default) searches distilled memory files; scope='sessions' searches raw conversation history \u2014 use it for 'did we discuss X?' recall that was never saved as a memory. Sessions scope uses native FTS5 syntax: space = AND, OR for breadth, "quoted phrases", prefix* wildcards. The discovery response already includes the top hit's goal + resolution bookends and a window around the match \u2014 cite the session_id + date. To pull more of one conversation, pass session_id (+ optional around=<msg id> or full=true) for a scroll/read view. If confidence is low, delegate query expansion to the nous-worker subagent, then re-search.`,
     inputSchema: object2({
-      query: string2().describe("Search keyword(s); multiple words are ANDed for session scope"),
+      query: string2().optional().describe("Search terms (FTS5 syntax for sessions scope). Omit when using session_id to scroll/read."),
       type: _enum(["fb", "proj", "ref", "usr"]).optional().describe("Filter by memory type (memories scope)"),
       project: string2().optional().describe("Filter by project hash"),
       scope: _enum(["memories", "sessions"]).optional().describe("Where to search (default: memories)"),
-      limit: number2().optional().describe("Max session matches to return (sessions scope; default 20)")
+      limit: number2().optional().describe("Max session matches to return (sessions scope; default 20)"),
+      session_id: string2().optional().describe("Sessions scope: pull an anchored/full view of this session (scroll/read mode)"),
+      around: number2().optional().describe("Sessions scope: center the window on this message id (from a prior hit)"),
+      full: boolean2().optional().describe("Sessions scope: return the whole session transcript")
     })
   },
-  async ({ query, type, project, scope, limit }) => {
+  async ({ query, type, project, scope, limit, session_id, around, full }) => {
     if (scope === "sessions") {
-      const result2 = searchSessions(getProjectsRoot(), { query, project, limit });
-      return { content: [{ type: "text", text: result2.text }] };
+      const db = getDb();
+      if (session_id) {
+        if (!db || !db.ftsAvailable) {
+          return { content: [{ type: "text", text: "Cold-tier DB unavailable; scroll/read needs the FTS index." }] };
+        }
+        const view = getAnchoredView(db, session_id, { around, full, window: config2.ladder.expandWindow });
+        const body = view.lines.length ? `${view.citation}
+
+${view.lines.join("\n")}` : `No indexed messages for session ${session_id}.`;
+        return { content: [{ type: "text", text: body }] };
+      }
+      const result2 = db && db.ftsAvailable ? searchSessionsDb(db, { query: query ?? "", project, limit: limit ?? config2.ladder.maxHits }, config2.ladder.rrfK) : searchSessions(getProjectsRoot(), { query: query ?? "", project, limit });
+      const hint = result2.confidence > 0 && result2.confidence < config2.ladder.escalateBelow ? "\n\n(low confidence \u2014 consider delegating query expansion to nous-worker, then re-searching)" : "";
+      return { content: [{ type: "text", text: result2.text + hint }] };
     }
     const memoryDirs = readDirs();
-    const result = handleSearch({ query, type, project }, memoryDirs);
-    return {
-      content: [{ type: "text", text: result.text }]
-    };
+    const result = handleSearch({ query: query ?? "", type, project }, memoryDirs);
+    return { content: [{ type: "text", text: result.text }] };
   }
 );
 server.registerTool(
@@ -25426,17 +26391,31 @@ server.registerTool(
     title: "Health Check",
     description: "Run health checks: staleness, registry drift, compression, links, duplicates, stats.",
     inputSchema: object2({
-      checks: array(_enum(["stale", "registry", "compression", "links", "duplicates", "stats", "lifecycle", "caps", "all"])).describe("Which checks to run")
+      checks: array(_enum(["stale", "registry", "compression", "links", "duplicates", "stats", "lifecycle", "caps", "sessions", "all"])).describe("Which checks to run")
     })
   },
   async ({ checks }) => {
     const memoryDirs = readDirs();
-    const result = handleCheck({ checks }, memoryDirs, config2);
-    return {
-      content: [{ type: "text", text: result.text }]
-    };
+    const result = handleCheck({ checks: checks.filter((c) => c !== "sessions") }, memoryDirs, config2);
+    let text = result.text;
+    if (checks.includes("sessions") || checks.includes("all")) {
+      text += "\n\n" + formatDbStats();
+    }
+    return { content: [{ type: "text", text }] };
   }
 );
+function formatDbStats() {
+  const db = getDb();
+  if (!db) return "SESSIONS (cold tier): node:sqlite unavailable (Node < 22.5) \u2014 brute-scan fallback active.";
+  const s = dbStats(db);
+  const mb = (s.sizeBytes / 1024 / 1024).toFixed(2);
+  return [
+    "SESSIONS (cold tier):",
+    `  sessions: ${s.sessions} (${s.unsummarized} unsummarized)`,
+    `  messages: ${s.messages}  redacted-hits: ${s.redacted}`,
+    `  db: ${mb} MB  fts5: ${s.ftsAvailable ? "on" : "off"}  last-index: ${s.lastIndex ?? "never"}`
+  ].join("\n");
+}
 server.registerTool(
   "nous_decode",
   {
@@ -25526,14 +26505,87 @@ function runScanCli() {
   const report = runScan([{ projectHash: hash2, memoryDir: memDir }], config2);
   process.stdout.write(formatReport(report) + "\n");
 }
-async function main() {
-  if (process.argv.includes("--migrate")) {
-    return;
+function argVal(flag) {
+  const i = process.argv.indexOf(flag);
+  return i >= 0 && i + 1 < process.argv.length ? process.argv[i + 1] : void 0;
+}
+async function readStdin() {
+  try {
+    return await new Promise((resolve) => {
+      let data = "";
+      process.stdin.setEncoding("utf8");
+      process.stdin.on("data", (c) => data += c);
+      process.stdin.on("end", () => resolve(data));
+      process.stdin.on("error", () => resolve(data));
+    });
+  } catch {
+    return "";
   }
-  if (process.argv.includes("--scan")) {
+}
+async function runCli() {
+  const argv = process.argv;
+  if (argv.includes("--migrate")) return true;
+  if (argv.includes("--scan")) {
     runScanCli();
-    return;
+    return true;
   }
+  if (argv.includes("--db-stats")) {
+    process.stdout.write(formatDbStats() + "\n");
+    return true;
+  }
+  if (argv.includes("--index") || argv.includes("--index-file")) {
+    const db = getDb();
+    if (!db) {
+      process.stdout.write("node:sqlite unavailable \u2014 cold tier disabled.\n");
+      return true;
+    }
+    const file2 = argVal("--index-file");
+    if (file2) {
+      const r = indexFile(db, file2, redactOpts());
+      process.stdout.write(r ? `indexed ${r.inserted} msg (${r.sessionId})
+` : "no new lines\n");
+    } else {
+      const r = indexAll(db, getProjectsRoot(), redactOpts());
+      process.stdout.write(
+        `indexed ${r.messages} msgs across ${r.filesIngested}/${r.filesScanned} files, ${r.sessions} sessions (${r.redacted} redactions)
+`
+      );
+    }
+    return true;
+  }
+  if (argv.includes("--pending")) {
+    const db = getDb();
+    if (!db) return true;
+    const ids = pendingSummaries(db, config2);
+    process.stdout.write(JSON.stringify(ids) + "\n");
+    return true;
+  }
+  if (argv.includes("--summarize-prompt")) {
+    const db = getDb();
+    const sid = argVal("--summarize-prompt");
+    if (!db || !sid) return true;
+    process.stdout.write(summarizerPrompt(buildTranscript(db, sid, config2)));
+    return true;
+  }
+  if (argv.includes("--summarize")) {
+    const db = getDb();
+    const sid = argVal("--summarize");
+    if (!db || !sid) return true;
+    const raw = await readStdin();
+    const parsed = parseSummary(raw);
+    if (parsed) {
+      writeSummary(db, sid, parsed, config2.userMemory.dir);
+      process.stdout.write("summary written\n");
+    } else {
+      writePlaceholder(db, sid);
+      process.stdout.write("summary parse failed \u2014 placeholder written\n");
+    }
+    return true;
+  }
+  return false;
+}
+async function main() {
+  if (await runCli()) return;
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("Nous MCP server running on stdio");
