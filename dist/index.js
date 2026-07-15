@@ -24675,6 +24675,10 @@ function handleSkill(input, config3) {
       const name = input.name;
       const target = skillFile(config3, name);
       try {
+        fs10.mkdirSync(root, { recursive: true });
+      } catch {
+      }
+      try {
         resolveWithin(root, path8.join(name, "SKILL.md"));
       } catch (e) {
         return { text: `Refused: ${e.message}`, isError: true };
@@ -24712,6 +24716,10 @@ Confirm with nous_skill action:"apply" id:"${p.id}".`
       }
       const p = listProposals("skill").find((x) => x.id === input.id);
       const name = p ? path8.basename(path8.dirname(p.target)) : "unknown";
+      try {
+        fs10.mkdirSync(root, { recursive: true });
+      } catch {
+      }
       const r = applyProposal(input.id, {
         backupDir: backupDir2(name),
         maxBackups: config3.skills.maxBackups,

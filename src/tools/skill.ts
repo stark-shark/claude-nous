@@ -97,6 +97,13 @@ export function handleSkill(input: SkillInput, config: RecallConfig): { text: st
 
       const name = input.name as string;
       const target = skillFile(config, name);
+      // The skills root may not exist yet (no personal skill ever created).
+      // resolveWithin realpath's the base, so ensure it exists first.
+      try {
+        fs.mkdirSync(root, { recursive: true });
+      } catch {
+        /* ignore */
+      }
       // Path-harden: target must stay within the skills root.
       try {
         resolveWithin(root, path.join(name, "SKILL.md"));
@@ -136,6 +143,11 @@ export function handleSkill(input: SkillInput, config: RecallConfig): { text: st
       // find the proposal's skill name from its target for the right backup dir
       const p = listProposals("skill").find((x) => x.id === input.id);
       const name = p ? path.basename(path.dirname(p.target)) : "unknown";
+      try {
+        fs.mkdirSync(root, { recursive: true }); // containment check realpaths root
+      } catch {
+        /* ignore */
+      }
       const r = applyProposal(input.id, {
         backupDir: backupDir(name),
         maxBackups: config.skills.maxBackups,

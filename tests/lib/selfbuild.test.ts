@@ -40,4 +40,11 @@ describe("selfbuild backup + path guard", () => {
     expect(() => resolveWithin(dir, "../outside")).toThrow();
     expect(() => resolveWithin(dir, "sub/ok")).not.toThrow();
   });
+
+  it("resolveWithin throws on a missing base, but works once created (skill-dir fix)", () => {
+    const missing = path.join(dir, "does-not-exist-yet");
+    expect(() => resolveWithin(missing, "s/SKILL.md")).toThrow(); // realpath(base) ENOENT
+    fs.mkdirSync(missing, { recursive: true });
+    expect(() => resolveWithin(missing, "s/SKILL.md")).not.toThrow();
+  });
 });
