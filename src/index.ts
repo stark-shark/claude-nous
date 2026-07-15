@@ -19,6 +19,9 @@ import {
   type MemoryDirEntry,
 } from "./lib/memory-dir.js";
 import { handleSave } from "./tools/save.js";
+import { handleRules } from "./tools/rules.js";
+import { handleSkill } from "./tools/skill.js";
+import { handleForget } from "./tools/forget.js";
 import { handleLoad } from "./tools/load.js";
 import { handleSearch } from "./tools/search.js";
 import { handleCheck } from "./tools/check.js";
@@ -70,9 +73,10 @@ const server = new McpServer(
     instructions: [
       "Nous — compressed memory notation system for Claude Code auto-memory.",
       "",
-      "TOOLS: nous_save (write with notation enforcement), nous_load (read with access tracking),",
-      "nous_search (cross-project query), nous_check (health checks), nous_decode (expand to plain English),",
-      "nous_registry (entity shortcode CRUD), nous_export/nous_import (backup/restore).",
+      "TOOLS: nous_save (write/batch with notation enforcement), nous_load (read with access tracking),",
+      "nous_search (hot memories + cold FTS5 sessions w/ bookends/scroll/read), nous_check (health + session stats),",
+      "nous_decode (expand to plain English), nous_registry (entity shortcodes), nous_rules (editable save-rules),",
+      "nous_skill (author procedural skills), nous_forget (right-to-forget purge), nous_export/nous_import (backup/restore).",
       "",
       "TASK DISPLAY (MANDATORY): EVERY nous_* tool call MUST be wrapped in TaskCreate/TaskUpdate.",
       "Set activeForm on the FIRST task to brand the operation:",
@@ -110,24 +114,51 @@ server.registerTool(
     description:
       "Write or update a memory file with Nous notation enforcement, dedup check, and index update. " +
       "Enforces a hard character cap on the body: a save over cap returns a 'Cap exceeded' error and writes nothing — consolidate or split, then retry THIS turn. " +
-      "A usr-type memory named 'user' or 'profile' is routed to the always-loaded user.md profile. Content is security-scanned before write.",
+      "A usr-type memory named 'user' or 'profile' is routed to the always-loaded user.md profile. Content is security-scanned before write. " +
+      "For self-maintenance (consolidating several memories at once), pass `batch` — an array of memory specs applied in one call; each is cap-checked independently.",
     inputSchema: z.object({
-      name: z.string().describe("Memory name (e.g. 'FK CASCADE')"),
-      type: z.enum(["fb", "proj", "ref", "usr"]).describe("Memory type"),
-      description: z.string().describe("One-line description for relevance matching"),
-      content: z.string().describe("Memory content in Nous notation"),
+      name: z.string().optional().describe("Memory name (e.g. 'FK CASCADE')"),
+      type: z.enum(["fb", "proj", "ref", "usr"]).optional().describe("Memory type"),
+      description: z.string().optional().describe("One-line description for relevance matching"),
+      content: z.string().optional().describe("Memory content in Nous notation"),
       links: z.array(z.string()).optional().describe("Linked memory filenames (without .md)"),
+      batch: z
+        .array(
+          z.object({
+            name: z.string(),
+            type: z.enum(["fb", "proj", "ref", "usr"]),
+            description: z.string(),
+            content: z.string(),
+            links: z.array(z.string()).optional(),
+          })
+        )
+        .optional()
+        .describe("Multiple memory saves applied in one call (self-maintenance / consolidation)"),
     }),
   },
-  async ({ name, type, description, content, links }) => {
+  async ({ name, type, description, content, links, batch }) => {
     const hash = getCurrentProjectHash();
     const memDir = ensureMemoryDir(hash, getProjectsRoot());
-    const result = handleSave({ name, type, description, content, links }, memDir, config);
 
-    return {
-      content: [{ type: "text" as const, text: result.text }],
-      isError: result.isError,
-    };
+    if (batch && batch.length > 0) {
+      const lines: string[] = [];
+      let anyError = false;
+      for (const spec of batch) {
+        const r = handleSave(spec, memDir, config);
+        if (r.isError) anyError = true;
+        lines.push(`${r.isError ? "✗" : "✔"} ${spec.name}: ${r.text.split("\n")[0]}`);
+      }
+      return { content: [{ type: "text" as const, text: lines.join("\n") }], isError: anyError };
+    }
+
+    if (!name || !type || !description || content === undefined) {
+      return {
+        content: [{ type: "text" as const, text: "nous_save requires name+type+description+content (or a `batch`)." }],
+        isError: true,
+      };
+    }
+    const result = handleSave({ name, type, description, content, links }, memDir, config);
+    return { content: [{ type: "text" as const, text: result.text }], isError: result.isError };
   }
 );
 
@@ -315,6 +346,74 @@ server.registerTool(
       content: [{ type: "text" as const, text: result.text }],
       isError: result.isError,
     };
+  }
+);
+
+// ─── nous_rules ──────────────────────────────────────────────
+
+server.registerTool(
+  "nous_rules",
+  {
+    title: "Save Rules",
+    description:
+      "Manage the editable, approval-gated save-rules (RULES.md) that govern what Nous remembers. " +
+      "get: show current rules. propose: stage a full-RULES.md change (returns an id). apply: commit a proposal by id (drift-guarded, backed up). rollback: restore the previous version. " +
+      "When the user corrects a save decision, propose a one-line rule change and let them confirm — never edit RULES.md directly.",
+    inputSchema: z.object({
+      action: z.enum(["get", "propose", "apply", "rollback"]),
+      content: z.string().optional().describe("Full new RULES.md (propose)"),
+      note: z.string().optional().describe("One-line description of the change (propose)"),
+      id: z.string().optional().describe("Proposal id (apply)"),
+    }),
+  },
+  async (args) => {
+    const result = handleRules(args, config);
+    return { content: [{ type: "text" as const, text: result.text }], isError: result.isError };
+  }
+);
+
+// ─── nous_skill ──────────────────────────────────────────────
+
+server.registerTool(
+  "nous_skill",
+  {
+    title: "Author Skill",
+    description:
+      "Author/evolve the agent's own procedural-memory skills (written to ~/.claude/skills, auto-discovered). " +
+      "list/get inspect; create/patch stage an approval-gated, frontmatter-validated, path-hardened proposal; apply commits by id (backed up); rollback restores. " +
+      "When a repeated workflow or correction warrants a reusable skill, propose one. The core 'nous' skill is read-only.",
+    inputSchema: z.object({
+      action: z.enum(["list", "get", "create", "patch", "apply", "rollback"]),
+      name: z.string().optional().describe("Skill name (kebab-case)"),
+      content: z.string().optional().describe("Full SKILL.md incl. frontmatter (create/patch)"),
+      note: z.string().optional(),
+      id: z.string().optional().describe("Proposal id (apply)"),
+    }),
+  },
+  async (args) => {
+    const result = handleSkill(args, config);
+    return { content: [{ type: "text" as const, text: result.text }], isError: result.isError };
+  }
+);
+
+// ─── nous_forget ─────────────────────────────────────────────
+
+server.registerTool(
+  "nous_forget",
+  {
+    title: "Forget",
+    description:
+      "Right-to-forget: purge a session (session_id) or all sessions matching a query from the cold-tier DB + FTS, with a tombstone so re-indexing won't restore it. " +
+      "Previews matches first; pass confirm:true to actually purge (irreversible).",
+    inputSchema: z.object({
+      session_id: z.string().optional(),
+      query: z.string().optional().describe("Purge sessions whose messages match this query"),
+      confirm: z.boolean().optional().describe("Set true to actually delete (else preview)"),
+    }),
+  },
+  async (args) => {
+    const result = handleForget(args, getDb(), readDirs(), config);
+    return { content: [{ type: "text" as const, text: result.text }], isError: result.isError };
   }
 );
 

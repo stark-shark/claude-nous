@@ -59,6 +59,18 @@ export function indexFile(
   const mtimeMs = Math.floor(stat.mtimeMs);
   const size = stat.size;
 
+  // Tombstoned by nous_forget — never re-index; record the stat so we stop
+  // rescanning it.
+  try {
+    const tomb = db.raw.prepare("SELECT 1 FROM meta WHERE key=?").get(`tombstone:${sessionId}`);
+    if (tomb) {
+      upsertFileRow(db, filePath, mtimeMs, size, size);
+      return null;
+    }
+  } catch {
+    /* ignore */
+  }
+
   const fileRow = db.raw
     .prepare("SELECT mtime, size, last_offset FROM files WHERE path=?")
     .get(filePath) as FileRow | undefined;
