@@ -23427,8 +23427,8 @@ function ensureGlobalMemoryDir() {
 }
 
 // src/tools/save.ts
-import * as fs7 from "node:fs";
-import * as path5 from "node:path";
+import * as fs8 from "node:fs";
+import * as path6 from "node:path";
 
 // src/lib/symbols.ts
 var VALID_TYPES = ["fb", "proj", "ref", "usr"];
@@ -24211,6 +24211,153 @@ ${body}
 <<END NOUS>>`;
 }
 
+// src/lib/selfbuild.ts
+import * as fs7 from "node:fs";
+import * as path5 from "node:path";
+import * as os2 from "node:os";
+import { createHash as createHash2 } from "node:crypto";
+function nousDir() {
+  return path5.join(os2.homedir(), ".claude", "nous");
+}
+function stateDir() {
+  return path5.join(nousDir(), "state");
+}
+function ts() {
+  return (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+}
+function sha(content) {
+  return createHash2("sha256").update(content).digest("hex");
+}
+function resolveWithin(base, target) {
+  const realBase = fs7.realpathSync(base);
+  const resolved = path5.resolve(base, target);
+  let probe = resolved;
+  while (!fs7.existsSync(probe)) {
+    const parent = path5.dirname(probe);
+    if (parent === probe) break;
+    probe = parent;
+  }
+  const realProbe = fs7.existsSync(probe) ? fs7.realpathSync(probe) : probe;
+  const rel = path5.relative(realBase, realProbe);
+  if (rel.startsWith("..") || path5.isAbsolute(rel)) {
+    throw new Error(`path escapes allowed dir: ${target}`);
+  }
+  return resolved;
+}
+function backupFile(file2, backupDir3, maxBackups) {
+  if (!fs7.existsSync(file2)) return null;
+  fs7.mkdirSync(backupDir3, { recursive: true });
+  const base = path5.basename(file2);
+  const dest = path5.join(backupDir3, `${base}.${ts()}.bak`);
+  fs7.copyFileSync(file2, dest);
+  rotateBackups(backupDir3, base, maxBackups);
+  return dest;
+}
+function listBackups(backupDir3, base) {
+  try {
+    return fs7.readdirSync(backupDir3).filter((f) => f.startsWith(base + ".") && f.endsWith(".bak")).sort();
+  } catch {
+    return [];
+  }
+}
+function rotateBackups(backupDir3, base, maxBackups) {
+  const backups = listBackups(backupDir3, base);
+  const excess = backups.length - Math.max(0, maxBackups);
+  for (let i = 0; i < excess; i++) {
+    try {
+      fs7.unlinkSync(path5.join(backupDir3, backups[i]));
+    } catch {
+    }
+  }
+}
+function rollbackLatest(file2, backupDir3) {
+  const base = path5.basename(file2);
+  const backups = listBackups(backupDir3, base);
+  if (backups.length === 0) return false;
+  const newest = backups[backups.length - 1];
+  try {
+    if (fs7.existsSync(file2)) backupFile(file2, backupDir3, 999);
+    fs7.copyFileSync(path5.join(backupDir3, newest), file2);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function pendingPath() {
+  return path5.join(stateDir(), "pending.json");
+}
+function readPending() {
+  try {
+    return JSON.parse(fs7.readFileSync(pendingPath(), "utf8"));
+  } catch {
+    return [];
+  }
+}
+function writePending(list) {
+  fs7.mkdirSync(stateDir(), { recursive: true });
+  fs7.writeFileSync(pendingPath(), JSON.stringify(list, null, 2), "utf8");
+}
+function addProposal(p) {
+  const list = readPending();
+  const id = `${p.kind}-${ts()}-${Math.abs(hashInt(p.target + p.note))}`;
+  const full = { ...p, id, created: (/* @__PURE__ */ new Date()).toISOString() };
+  list.push(full);
+  writePending(list);
+  return full;
+}
+function listProposals(kind) {
+  return readPending().filter((p) => !kind || p.kind === kind);
+}
+function getProposal(id) {
+  return readPending().find((p) => p.id === id);
+}
+function clearProposal(id) {
+  writePending(readPending().filter((p) => p.id !== id));
+}
+function hashInt(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = h * 31 + s.charCodeAt(i) | 0;
+  return h;
+}
+function applyProposal(id, opts) {
+  const p = getProposal(id);
+  if (!p) return { ok: false, message: `No pending proposal '${id}'.` };
+  const target = p.target;
+  if (opts.containBase) {
+    try {
+      resolveWithin(opts.containBase, target);
+    } catch (e) {
+      return { ok: false, message: `Refused: ${e.message}` };
+    }
+  }
+  if (opts.validate) {
+    const err = opts.validate(p.payload);
+    if (err) return { ok: false, message: `Refused (invalid): ${err}` };
+  }
+  let current = "";
+  try {
+    current = fs7.readFileSync(target, "utf8");
+  } catch {
+    current = "";
+  }
+  if (sha(current) !== p.baseHash) {
+    return {
+      ok: false,
+      message: "Refused: target changed since this proposal (drift). Re-read and re-propose. Proposal kept for inspection."
+    };
+  }
+  let backup = null;
+  try {
+    fs7.mkdirSync(path5.dirname(target), { recursive: true });
+    backup = backupFile(target, opts.backupDir, opts.maxBackups);
+    fs7.writeFileSync(target, p.payload, "utf8");
+  } catch (e) {
+    return { ok: false, message: `Write failed: ${e.message}` };
+  }
+  clearProposal(id);
+  return { ok: true, message: `Applied '${id}' -> ${target}`, backup };
+}
+
 // src/tools/save.ts
 function nameToFilename(name, type) {
   const prefix = type === "fb" ? "feedback" : type === "proj" ? "project" : type === "ref" ? "reference" : "user";
@@ -24226,8 +24373,8 @@ function handleSave(input, memoryDir, config3) {
   const isUserFile = input.type === "usr" && (slug === "user" || slug === "profile");
   const filename = isUserFile ? config3.userMemory.filename : nameToFilename(input.name, input.type);
   const targetDir = isUserFile && config3.userMemory.dir ? config3.userMemory.dir : memoryDir;
-  if (targetDir !== memoryDir) fs7.mkdirSync(targetDir, { recursive: true });
-  const filePath = path5.join(targetDir, filename);
+  if (targetDir !== memoryDir) fs8.mkdirSync(targetDir, { recursive: true });
+  const filePath = path6.join(targetDir, filename);
   if (config3.security.scanOnWrite) {
     const scan = scanContent(input.content);
     if (scan.hasHard && config3.security.rejectInvisible) {
@@ -24250,9 +24397,9 @@ Nothing was written. Remove the flagged characters and retry.`,
     const usage2 = measureCap(input.content.length, cap);
     if (!usage2.unlimited && usage2.over > 0) {
       let existingBody = null;
-      if (fs7.existsSync(filePath)) {
+      if (fs8.existsSync(filePath)) {
         try {
-          existingBody = stripHeader(fs7.readFileSync(filePath, "utf-8"));
+          existingBody = stripHeader(fs8.readFileSync(filePath, "utf-8"));
         } catch {
           existingBody = null;
         }
@@ -24284,10 +24431,10 @@ Compress using the Nous symbol grammar before saving.`,
     warnings.push(...validation.warnings);
   }
   const existingFiles = /* @__PURE__ */ new Map();
-  for (const f of fs7.readdirSync(memoryDir)) {
+  for (const f of fs8.readdirSync(memoryDir)) {
     if (f.endsWith(".md") && f !== "MEMORY.md" && f !== "REGISTRY.md" && f !== filename) {
       try {
-        const content = fs7.readFileSync(path5.join(memoryDir, f), "utf-8");
+        const content = fs8.readFileSync(path6.join(memoryDir, f), "utf-8");
         const body = stripHeader(content);
         existingFiles.set(f, body);
       } catch (err) {
@@ -24304,7 +24451,7 @@ Compress using the Nous symbol grammar before saving.`,
       filename
     };
   }
-  const registryPath = path5.join(memoryDir, config3.registryFile);
+  const registryPath = path6.join(memoryDir, config3.registryFile);
   const registry2 = loadRegistry(registryPath);
   const unknownEntities = findUnknownEntities(input.content, registry2);
   if (unknownEntities.length > 0) {
@@ -24312,10 +24459,10 @@ Compress using the Nous symbol grammar before saving.`,
       `Unknown entities (not in ${config3.registryFile}): ${unknownEntities.join(", ")}`
     );
   }
-  const isUpdate = fs7.existsSync(filePath);
+  const isUpdate = fs8.existsSync(filePath);
   let header;
   if (isUpdate) {
-    const existing = fs7.readFileSync(filePath, "utf-8");
+    const existing = fs8.readFileSync(filePath, "utf-8");
     const existingHeader = parseHeader(existing);
     if (existingHeader && existingHeader.name.toLowerCase() !== input.name.toLowerCase()) {
       return {
@@ -24349,10 +24496,19 @@ Compress using the Nous symbol grammar before saving.`,
   const fileContent = `${serializeHeader(header)}
 ${input.content}
 `;
-  fs7.writeFileSync(filePath, fileContent, "utf-8");
+  if (isUpdate) {
+    try {
+      const prior = fs8.readFileSync(filePath, "utf-8");
+      if (prior !== fileContent) {
+        backupFile(filePath, path6.join(memoryDir, ".backups"), config3.rules.maxBackups);
+      }
+    } catch {
+    }
+  }
+  fs8.writeFileSync(filePath, fileContent, "utf-8");
   ensureDecoderFile(memoryDir);
   if (config3.maintainIndex && !isUserFile) {
-    const indexPath = path5.join(memoryDir, config3.indexFile);
+    const indexPath = path6.join(memoryDir, config3.indexFile);
     const { archived } = upsertIndexEntry(
       indexPath,
       filename,
@@ -24405,155 +24561,6 @@ ${warnings.map((w) => `  \u26A0 ${w}`).join("\n")}`;
 // src/tools/rules.ts
 import * as fs9 from "node:fs";
 import * as path7 from "node:path";
-
-// src/lib/selfbuild.ts
-import * as fs8 from "node:fs";
-import * as path6 from "node:path";
-import * as os2 from "node:os";
-import { createHash as createHash2 } from "node:crypto";
-function nousDir() {
-  return path6.join(os2.homedir(), ".claude", "nous");
-}
-function stateDir() {
-  return path6.join(nousDir(), "state");
-}
-function ts() {
-  return (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-}
-function sha(content) {
-  return createHash2("sha256").update(content).digest("hex");
-}
-function resolveWithin(base, target) {
-  const realBase = fs8.realpathSync(base);
-  const resolved = path6.resolve(base, target);
-  let probe = resolved;
-  while (!fs8.existsSync(probe)) {
-    const parent = path6.dirname(probe);
-    if (parent === probe) break;
-    probe = parent;
-  }
-  const realProbe = fs8.existsSync(probe) ? fs8.realpathSync(probe) : probe;
-  const rel = path6.relative(realBase, realProbe);
-  if (rel.startsWith("..") || path6.isAbsolute(rel)) {
-    throw new Error(`path escapes allowed dir: ${target}`);
-  }
-  return resolved;
-}
-function backupFile(file2, backupDir3, maxBackups) {
-  if (!fs8.existsSync(file2)) return null;
-  fs8.mkdirSync(backupDir3, { recursive: true });
-  const base = path6.basename(file2);
-  const dest = path6.join(backupDir3, `${base}.${ts()}.bak`);
-  fs8.copyFileSync(file2, dest);
-  rotateBackups(backupDir3, base, maxBackups);
-  return dest;
-}
-function listBackups(backupDir3, base) {
-  try {
-    return fs8.readdirSync(backupDir3).filter((f) => f.startsWith(base + ".") && f.endsWith(".bak")).sort();
-  } catch {
-    return [];
-  }
-}
-function rotateBackups(backupDir3, base, maxBackups) {
-  const backups = listBackups(backupDir3, base);
-  const excess = backups.length - Math.max(0, maxBackups);
-  for (let i = 0; i < excess; i++) {
-    try {
-      fs8.unlinkSync(path6.join(backupDir3, backups[i]));
-    } catch {
-    }
-  }
-}
-function rollbackLatest(file2, backupDir3) {
-  const base = path6.basename(file2);
-  const backups = listBackups(backupDir3, base);
-  if (backups.length === 0) return false;
-  const newest = backups[backups.length - 1];
-  try {
-    if (fs8.existsSync(file2)) backupFile(file2, backupDir3, 999);
-    fs8.copyFileSync(path6.join(backupDir3, newest), file2);
-    return true;
-  } catch {
-    return false;
-  }
-}
-function pendingPath() {
-  return path6.join(stateDir(), "pending.json");
-}
-function readPending() {
-  try {
-    return JSON.parse(fs8.readFileSync(pendingPath(), "utf8"));
-  } catch {
-    return [];
-  }
-}
-function writePending(list) {
-  fs8.mkdirSync(stateDir(), { recursive: true });
-  fs8.writeFileSync(pendingPath(), JSON.stringify(list, null, 2), "utf8");
-}
-function addProposal(p) {
-  const list = readPending();
-  const id = `${p.kind}-${ts()}-${Math.abs(hashInt(p.target + p.note))}`;
-  const full = { ...p, id, created: (/* @__PURE__ */ new Date()).toISOString() };
-  list.push(full);
-  writePending(list);
-  return full;
-}
-function listProposals(kind) {
-  return readPending().filter((p) => !kind || p.kind === kind);
-}
-function getProposal(id) {
-  return readPending().find((p) => p.id === id);
-}
-function clearProposal(id) {
-  writePending(readPending().filter((p) => p.id !== id));
-}
-function hashInt(s) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = h * 31 + s.charCodeAt(i) | 0;
-  return h;
-}
-function applyProposal(id, opts) {
-  const p = getProposal(id);
-  if (!p) return { ok: false, message: `No pending proposal '${id}'.` };
-  const target = p.target;
-  if (opts.containBase) {
-    try {
-      resolveWithin(opts.containBase, target);
-    } catch (e) {
-      return { ok: false, message: `Refused: ${e.message}` };
-    }
-  }
-  if (opts.validate) {
-    const err = opts.validate(p.payload);
-    if (err) return { ok: false, message: `Refused (invalid): ${err}` };
-  }
-  let current = "";
-  try {
-    current = fs8.readFileSync(target, "utf8");
-  } catch {
-    current = "";
-  }
-  if (sha(current) !== p.baseHash) {
-    return {
-      ok: false,
-      message: "Refused: target changed since this proposal (drift). Re-read and re-propose. Proposal kept for inspection."
-    };
-  }
-  let backup = null;
-  try {
-    fs8.mkdirSync(path6.dirname(target), { recursive: true });
-    backup = backupFile(target, opts.backupDir, opts.maxBackups);
-    fs8.writeFileSync(target, p.payload, "utf8");
-  } catch (e) {
-    return { ok: false, message: `Write failed: ${e.message}` };
-  }
-  clearProposal(id);
-  return { ok: true, message: `Applied '${id}' -> ${target}`, backup };
-}
-
-// src/tools/rules.ts
 function rulesPath() {
   return path7.join(nousDir(), "RULES.md");
 }
@@ -26750,7 +26757,7 @@ ${m.body}`;
 }
 
 // src/index.ts
-var VERSION = true ? "1.1.1" : "0.0.0-dev";
+var VERSION = true ? "1.1.2" : "0.0.0-dev";
 var _emitWarning = process.emitWarning.bind(process);
 process.emitWarning = ((warning, ...rest) => {
   const msg = typeof warning === "string" ? warning : warning?.message ?? "";

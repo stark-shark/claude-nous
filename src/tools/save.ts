@@ -11,6 +11,7 @@ import { ensureBidirectionalLinks } from "../lib/links.js";
 import { ensureDecoderFile } from "../lib/decoder-file.js";
 import { capFor, measureCap, usageLine, overflowError } from "../lib/caps.js";
 import { scanContent } from "../lib/threat.js";
+import { backupFile } from "../lib/selfbuild.js";
 
 export interface SaveInput {
   name: string;
@@ -206,8 +207,22 @@ export function handleSave(
     header.updated = todayStr();
   }
 
-  // Write file
+  // Write file. Back up the prior version first on any overwrite so a rewrite
+  // (esp. an autonomous condense via nous_maintain) is never a silent, permanent
+  // loss of hand-written content — the anti-Hermes-self-rewrite guardrail.
   const fileContent = `${serializeHeader(header)}\n${input.content}\n`;
+  if (isUpdate) {
+    try {
+      const prior = fs.readFileSync(filePath, "utf-8");
+      if (prior !== fileContent) {
+        // Co-located per-project backups (ignored by the scan, which only reads
+        // top-level .md files) — restore by copying a .bak body back.
+        backupFile(filePath, path.join(memoryDir, ".backups"), config.rules.maxBackups);
+      }
+    } catch {
+      /* best effort — never block a save on backup failure */
+    }
+  }
   fs.writeFileSync(filePath, fileContent, "utf-8");
 
   // Refresh decoder cheatsheet alongside memories — survives plugin uninstall.

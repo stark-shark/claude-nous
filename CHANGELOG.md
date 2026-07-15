@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2
+
+- **fix(save):** `nous_save` now backs up the prior memory body to `<memoryDir>/.backups/` before any overwrite (rotated). Previously overwrites — especially an autonomous condense via `nous_maintain apply` — were a silent, irreversible loss of hand-written content, the exact anti-guardrail the design exists to prevent.
+
 ## 1.1.1
 
 - **fix(maintain):** the background auto-condense only stages a condensed memory if the result actually **fits the cap** (with one stricter retry). Previously it staged any size reduction, so a condense that was still over-cap produced a proposal `nous_maintain apply` couldn't apply (nous_save rejects over-cap).
