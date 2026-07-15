@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+
+- **fix(maintain):** the background auto-condense only stages a condensed memory if the result actually **fits the cap** (with one stricter retry). Previously it staged any size reduction, so a condense that was still over-cap produced a proposal `nous_maintain apply` couldn't apply (nous_save rejects over-cap).
+
 ## 1.1.0
 
 Size-triggered self-maintenance + fixes from live v1 testing.

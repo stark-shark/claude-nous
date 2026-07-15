@@ -66,10 +66,19 @@ try {
   const over = rawOver ? JSON.parse(rawOver) : [];
   const proposals = [];
   for (const m of over.slice(0, 3)) {
-    const condensed = runClaude(m.prompt, cfg.capture.haikuModel);
-    if (!condensed) continue;
-    const body = condensed.trim();
-    if (!body || body.length >= m.used) continue; // only stage a real reduction
+    let body = (runClaude(m.prompt, cfg.capture.haikuModel) || "").trim();
+    // If the first pass is still over cap, retry once, harder. Only a result
+    // that actually FITS is worth staging — an over-cap "condense" can't be
+    // applied (nous_save rejects it), so staging it would be useless.
+    if (body && body.length > m.cap) {
+      const retry =
+        m.prompt +
+        `\n\nYour previous attempt was ${body.length} chars — STILL over the ${m.cap} limit. ` +
+        `Cut more aggressively: merge lines, drop the least-important details, keep only load-bearing identifiers. Get UNDER ${m.cap}.`;
+      const second = (runClaude(retry, cfg.capture.haikuModel) || "").trim();
+      if (second && second.length < body.length) body = second;
+    }
+    if (!body || body.length >= m.used || body.length > m.cap) continue; // must be a real reduction AND fit the cap
     proposals.push({
       kind: "memory",
       target: m.name,
