@@ -28,11 +28,11 @@ export function appendDigest(date: string, entry: DigestEntry, base?: string): v
     /* ignore */
   }
   const file = path.join(dir, `${date}.md`);
-  const sid = entry.sessionId.slice(0, 8);
+  const shortId = entry.sessionId.slice(0, 8);
 
-  // Idempotence: don't append a section for a session already recorded today.
+  // Idempotence: keyed on the FULL session id (short ids could collide).
   try {
-    if (fs.existsSync(file) && fs.readFileSync(file, "utf8").includes(`<!--session:${sid}-->`)) {
+    if (fs.existsSync(file) && fs.readFileSync(file, "utf8").includes(`<!--session:${entry.sessionId}-->`)) {
       return;
     }
   } catch {
@@ -41,7 +41,7 @@ export function appendDigest(date: string, entry: DigestEntry, base?: string): v
 
   const lines: string[] = [];
   if (!fs.existsSync(file)) lines.push(`# ${date}`, "");
-  lines.push(`## ${entry.project} · ${sid} <!--session:${sid}-->`);
+  lines.push(`## ${entry.project} · ${shortId} <!--session:${entry.sessionId}-->`);
   if (entry.summary) lines.push(entry.summary.trim());
   if (entry.decisions?.length) {
     lines.push("", "**Decisions:**");

@@ -45,7 +45,8 @@ import {
   pendingSummaries,
 } from "./lib/summarize.js";
 import { injectDaily } from "./lib/daily.js";
-import { nousDir, addProposal, listProposals, sha, type Proposal } from "./lib/selfbuild.js";
+import { nousDir, addProposal, listProposals, getProposal, clearProposal, sha, type Proposal } from "./lib/selfbuild.js";
+import { scanCapPressure, condensePrompt } from "./lib/maintain.js";
 
 // Silence node:sqlite's ExperimentalWarning — it's expected and would otherwise
 // pollute hook stderr / CLI output on every invocation.
@@ -89,7 +90,8 @@ const server = new McpServer(
       "TOOLS: nous_save (write/batch with notation enforcement), nous_load (read with access tracking),",
       "nous_search (hot memories + cold FTS5 sessions w/ bookends/scroll/read), nous_check (health + session stats),",
       "nous_decode (expand to plain English), nous_registry (entity shortcodes), nous_rules (editable save-rules),",
-      "nous_skill (author procedural skills), nous_forget (right-to-forget purge), nous_export/nous_import (backup/restore).",
+      "nous_skill (author procedural skills), nous_maintain (scan/apply cap-pressure condense proposals),",
+      "nous_forget (right-to-forget purge), nous_export/nous_import (backup/restore).",
       "",
       "TASK DISPLAY (MANDATORY): EVERY nous_* tool call MUST be wrapped in TaskCreate/TaskUpdate.",
       "Set activeForm on the FIRST task to brand the operation:",
@@ -430,6 +432,56 @@ server.registerTool(
   }
 );
 
+// ─── nous_maintain ───────────────────────────────────────────
+
+server.registerTool(
+  "nous_maintain",
+  {
+    title: "Maintain Memory",
+    description:
+      "Self-maintaining memory. action:\"scan\" lists memories at/over their cap (candidates to condense). " +
+      "action:\"list\" shows staged condense proposals from the background review. action:\"apply\" commits a staged condense proposal by id (writes the condensed body via nous_save). " +
+      "Content rewrites are always staged for approval — never silent.",
+    inputSchema: z.object({
+      action: z.enum(["scan", "list", "apply"]),
+      id: z.string().optional().describe("Proposal id (apply)"),
+    }),
+  },
+  async ({ action, id }) => {
+    if (action === "scan") {
+      const items = scanCapPressure(readDirs(), config, { overOnly: false });
+      if (items.length === 0) return { content: [{ type: "text" as const, text: "No memories under cap pressure." }] };
+      const text = items
+        .map((m) => `- ${m.name} (${m.type}) ${m.used}/${m.cap} (${m.pct}%)${m.over > 0 ? " — OVER" : ""}`)
+        .join("\n");
+      return { content: [{ type: "text" as const, text: `Cap pressure:\n${text}` }] };
+    }
+    if (action === "list") {
+      const pend = listProposals("memory");
+      const text = pend.length ? pend.map((p) => `- ${p.id} — ${p.note}`).join("\n") : "No staged memory proposals.";
+      return { content: [{ type: "text" as const, text }] };
+    }
+    // apply
+    if (!id) return { content: [{ type: "text" as const, text: "apply requires an id." }], isError: true };
+    const p = getProposal(id);
+    if (!p || p.kind !== "memory") return { content: [{ type: "text" as const, text: `No memory proposal '${id}'.` }], isError: true };
+    let spec: { name: string; type: "fb" | "proj" | "ref" | "usr"; description: string; content: string; memoryDir?: string };
+    try {
+      spec = JSON.parse(p.payload);
+    } catch {
+      return { content: [{ type: "text" as const, text: "Proposal payload is not valid JSON." }], isError: true };
+    }
+    const memDir = spec.memoryDir || ensureMemoryDir(getCurrentProjectHash(), getProjectsRoot());
+    const result = handleSave(
+      { name: spec.name, type: spec.type, description: spec.description, content: spec.content },
+      memDir,
+      config
+    );
+    if (!result.isError) clearProposal(id);
+    return { content: [{ type: "text" as const, text: result.text }], isError: result.isError };
+  }
+);
+
 // ─── nous_import ─────────────────────────────────────────────
 
 server.registerTool(
@@ -591,6 +643,23 @@ async function runCli(): Promise<boolean> {
     return true;
   }
 
+  // Over-cap (+ near-cap) memories with ready-to-run condense prompts — the
+  // background review worker consumes this to auto-condense under approval.
+  if (argv.includes("--over-cap")) {
+    const items = scanCapPressure(readDirs(), config, { overOnly: true }).map((m) => ({
+      name: m.name,
+      type: m.type,
+      description: m.description,
+      memoryDir: m.memoryDir,
+      file: m.file,
+      used: m.used,
+      cap: m.cap,
+      prompt: condensePrompt(m),
+    }));
+    process.stdout.write(JSON.stringify(items) + "\n");
+    return true;
+  }
+
   if (argv.includes("--pending")) {
     const db = getDb();
     if (!db) return true;
@@ -616,8 +685,8 @@ async function runCli(): Promise<boolean> {
     const raw = await readStdin();
     const parsed = parseSummary(raw);
     if (parsed) {
-      writeSummary(db, sid, parsed, config.userMemory.dir);
-      process.stdout.write("summary written\n");
+      const ok = writeSummary(db, sid, parsed, config.userMemory.dir);
+      process.stdout.write(ok ? "summary written\n" : `no such session '${sid}' — nothing written\n`);
     } else {
       writePlaceholder(db, sid);
       process.stdout.write("summary parse failed — placeholder written\n");

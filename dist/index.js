@@ -3222,8 +3222,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path23) {
-      let input = path23;
+    function removeDotSegments(path24) {
+      let input = path24;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3422,8 +3422,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path23, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path23 && path23 !== "/" ? path23 : void 0;
+        const [path24, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path24 && path24 !== "/" ? path24 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -6785,12 +6785,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs24, exportName) {
+    function addFormats(ajv, list, fs25, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs24[f]);
+        ajv.addFormat(f, fs25[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -7157,8 +7157,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path23, errorMaps, issueData } = params;
-  const fullPath = [...path23, ...issueData.path || []];
+  const { data, path: path24, errorMaps, issueData } = params;
+  const fullPath = [...path24, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7273,11 +7273,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path23, key) {
+  constructor(parent, value, path24, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path23;
+    this._path = path24;
     this._key = key;
   }
   get path() {
@@ -10921,10 +10921,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path23) {
-  if (!path23)
+function getElementAtPath(obj, path24) {
+  if (!path24)
     return obj;
-  return path23.reduce((acc, key) => acc?.[key], obj);
+  return path24.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11307,11 +11307,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path23, issues) {
+function prefixIssues(path24, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path23);
+    iss.path.unshift(path24);
     return iss;
   });
 }
@@ -23220,8 +23220,8 @@ var StdioServerTransport = class {
 };
 
 // src/index.ts
-import * as fs23 from "node:fs";
-import * as path22 from "node:path";
+import * as fs24 from "node:fs";
+import * as path23 from "node:path";
 import * as os7 from "node:os";
 import { fileURLToPath } from "node:url";
 
@@ -26512,16 +26512,16 @@ function appendDigest(date4, entry, base) {
   } catch {
   }
   const file2 = path21.join(dir, `${date4}.md`);
-  const sid = entry.sessionId.slice(0, 8);
+  const shortId = entry.sessionId.slice(0, 8);
   try {
-    if (fs22.existsSync(file2) && fs22.readFileSync(file2, "utf8").includes(`<!--session:${sid}-->`)) {
+    if (fs22.existsSync(file2) && fs22.readFileSync(file2, "utf8").includes(`<!--session:${entry.sessionId}-->`)) {
       return;
     }
   } catch {
   }
   const lines = [];
   if (!fs22.existsSync(file2)) lines.push(`# ${date4}`, "");
-  lines.push(`## ${entry.project} \xB7 ${sid} <!--session:${sid}-->`);
+  lines.push(`## ${entry.project} \xB7 ${shortId} <!--session:${entry.sessionId}-->`);
   if (entry.summary) lines.push(entry.summary.trim());
   if (entry.decisions?.length) {
     lines.push("", "**Decisions:**");
@@ -26630,25 +26630,30 @@ function sessionDate(db, sessionId) {
   }
 }
 function writeSummary(db, sessionId, result, memoryBase) {
-  const now = (/* @__PURE__ */ new Date()).toISOString();
   let project = "";
   try {
     const row = db.raw.prepare("SELECT project FROM sessions WHERE session_id=?").get(sessionId);
-    project = row?.project || "";
+    if (!row) return false;
+    project = row.project || "";
   } catch {
+    return false;
   }
+  let changed = 0;
   try {
-    db.raw.prepare(
+    const res = db.raw.prepare(
       "UPDATE sessions SET summary=?, decisions=?, open_threads=?, summarized_at=? WHERE session_id=?"
     ).run(
       result.summary,
       JSON.stringify(result.decisions),
       JSON.stringify(result.open_threads),
-      now,
+      (/* @__PURE__ */ new Date()).toISOString(),
       sessionId
     );
+    changed = Number(res.changes);
   } catch {
+    return false;
   }
+  if (changed === 0) return false;
   appendDigest(
     sessionDate(db, sessionId),
     {
@@ -26660,6 +26665,7 @@ function writeSummary(db, sessionId, result, memoryBase) {
     },
     memoryBase
   );
+  return true;
 }
 function writePlaceholder(db, sessionId) {
   try {
@@ -26676,6 +26682,65 @@ function pendingSummaries(db, cfg) {
   }
 }
 
+// src/lib/maintain.ts
+import * as fs23 from "node:fs";
+import * as path22 from "node:path";
+function scanCapPressure(memoryDirs, config3, opts = {}) {
+  const nearPct = opts.nearPct ?? 90;
+  const out = [];
+  for (const { memoryDir } of memoryDirs) {
+    if (!fs23.existsSync(memoryDir)) continue;
+    let files;
+    try {
+      files = fs23.readdirSync(memoryDir);
+    } catch {
+      continue;
+    }
+    for (const f of files) {
+      if (!f.endsWith(".md") || f === "MEMORY.md" || f === "REGISTRY.md" || f === "MEMORY_ARCHIVE.md") continue;
+      let content;
+      try {
+        content = fs23.readFileSync(path22.join(memoryDir, f), "utf-8");
+      } catch {
+        continue;
+      }
+      const header = parseHeader(content);
+      if (!header) continue;
+      const body = stripHeader(content);
+      const cap = capFor(header.type, f, config3);
+      const usage = measureCap(body.length, cap);
+      if (usage.unlimited) continue;
+      const isOver = usage.over > 0;
+      const isNear = usage.pct >= nearPct;
+      if (opts.overOnly ? isOver : isOver || isNear) {
+        out.push({
+          name: header.name,
+          type: header.type,
+          description: header.description,
+          file: f,
+          memoryDir,
+          body,
+          used: usage.used,
+          cap: usage.cap,
+          pct: usage.pct,
+          over: usage.over
+        });
+      }
+    }
+  }
+  return out.sort((a, b) => b.over - a.over || b.pct - a.pct);
+}
+function condensePrompt(m) {
+  return `Condense this Nous memory so its body fits within ${m.cap} characters (currently ${m.used}). Reply with ONLY the new body \u2014 no frontmatter, no fences, no commentary.
+Rules: keep ALL technical identifiers, file paths, commands, numbers, dates, and names verbatim; drop filler/hedging/redundancy; merge overlapping lines; use Nous notation operators (-> :: >> @ != & |). Do not invent or drop distinct facts \u2014 only tighten.
+
+TYPE: ${m.type}
+NAME: ${m.name}
+
+CURRENT BODY:
+${m.body}`;
+}
+
 // src/index.ts
 var VERSION = typeof __NOUS_VERSION__ === "string" ? __NOUS_VERSION__ : "0.0.0-dev";
 var _emitWarning = process.emitWarning.bind(process);
@@ -26685,8 +26750,8 @@ process.emitWarning = ((warning, ...rest) => {
   return _emitWarning(warning, ...rest);
 });
 migrateFromRecall();
-var SERVER_DIR = path22.join(os7.homedir(), ".claude", "nous");
-var CONFIG_PATH = path22.join(SERVER_DIR, "nous.config.jsonc");
+var SERVER_DIR = path23.join(os7.homedir(), ".claude", "nous");
+var CONFIG_PATH = path23.join(SERVER_DIR, "nous.config.jsonc");
 var config2 = loadConfig(CONFIG_PATH);
 var GLOBAL_MEMORY_DIR = ensureGlobalMemoryDir();
 config2.userMemory.dir = GLOBAL_MEMORY_DIR;
@@ -26707,7 +26772,8 @@ var server = new McpServer(
       "TOOLS: nous_save (write/batch with notation enforcement), nous_load (read with access tracking),",
       "nous_search (hot memories + cold FTS5 sessions w/ bookends/scroll/read), nous_check (health + session stats),",
       "nous_decode (expand to plain English), nous_registry (entity shortcodes), nous_rules (editable save-rules),",
-      "nous_skill (author procedural skills), nous_forget (right-to-forget purge), nous_export/nous_import (backup/restore).",
+      "nous_skill (author procedural skills), nous_maintain (scan/apply cap-pressure condense proposals),",
+      "nous_forget (right-to-forget purge), nous_export/nous_import (backup/restore).",
       "",
       "TASK DISPLAY (MANDATORY): EVERY nous_* tool call MUST be wrapped in TaskCreate/TaskUpdate.",
       "Set activeForm on the FIRST task to brand the operation:",
@@ -26723,7 +26789,7 @@ var server = new McpServer(
   }
 );
 function getProjectsRoot() {
-  return path22.join(os7.homedir(), ".claude", "projects");
+  return path23.join(os7.homedir(), ".claude", "projects");
 }
 var _db;
 function getDb() {
@@ -26977,6 +27043,48 @@ server.registerTool(
   }
 );
 server.registerTool(
+  "nous_maintain",
+  {
+    title: "Maintain Memory",
+    description: 'Self-maintaining memory. action:"scan" lists memories at/over their cap (candidates to condense). action:"list" shows staged condense proposals from the background review. action:"apply" commits a staged condense proposal by id (writes the condensed body via nous_save). Content rewrites are always staged for approval \u2014 never silent.',
+    inputSchema: object2({
+      action: _enum(["scan", "list", "apply"]),
+      id: string2().optional().describe("Proposal id (apply)")
+    })
+  },
+  async ({ action, id }) => {
+    if (action === "scan") {
+      const items = scanCapPressure(readDirs(), config2, { overOnly: false });
+      if (items.length === 0) return { content: [{ type: "text", text: "No memories under cap pressure." }] };
+      const text = items.map((m) => `- ${m.name} (${m.type}) ${m.used}/${m.cap} (${m.pct}%)${m.over > 0 ? " \u2014 OVER" : ""}`).join("\n");
+      return { content: [{ type: "text", text: `Cap pressure:
+${text}` }] };
+    }
+    if (action === "list") {
+      const pend = listProposals("memory");
+      const text = pend.length ? pend.map((p2) => `- ${p2.id} \u2014 ${p2.note}`).join("\n") : "No staged memory proposals.";
+      return { content: [{ type: "text", text }] };
+    }
+    if (!id) return { content: [{ type: "text", text: "apply requires an id." }], isError: true };
+    const p = getProposal(id);
+    if (!p || p.kind !== "memory") return { content: [{ type: "text", text: `No memory proposal '${id}'.` }], isError: true };
+    let spec;
+    try {
+      spec = JSON.parse(p.payload);
+    } catch {
+      return { content: [{ type: "text", text: "Proposal payload is not valid JSON." }], isError: true };
+    }
+    const memDir = spec.memoryDir || ensureMemoryDir(getCurrentProjectHash(), getProjectsRoot());
+    const result = handleSave(
+      { name: spec.name, type: spec.type, description: spec.description, content: spec.content },
+      memDir,
+      config2
+    );
+    if (!result.isError) clearProposal(id);
+    return { content: [{ type: "text", text: result.text }], isError: result.isError };
+  }
+);
+server.registerTool(
   "nous_import",
   {
     title: "Import Memories",
@@ -27035,12 +27143,12 @@ async function runCli() {
   }
   if (argv.includes("--seed-rules")) {
     try {
-      const dest = path22.join(nousDir(), "RULES.md");
-      if (!fs23.existsSync(dest)) {
-        const distDir = path22.dirname(fileURLToPath(import.meta.url));
-        const tpl = path22.join(distDir, "..", "RULES.default.md");
-        fs23.mkdirSync(path22.dirname(dest), { recursive: true });
-        if (fs23.existsSync(tpl)) fs23.copyFileSync(tpl, dest);
+      const dest = path23.join(nousDir(), "RULES.md");
+      if (!fs24.existsSync(dest)) {
+        const distDir = path23.dirname(fileURLToPath(import.meta.url));
+        const tpl = path23.join(distDir, "..", "RULES.default.md");
+        fs24.mkdirSync(path23.dirname(dest), { recursive: true });
+        if (fs24.existsSync(tpl)) fs24.copyFileSync(tpl, dest);
       }
     } catch {
     }
@@ -27051,7 +27159,7 @@ async function runCli() {
     const daily = injectDaily(config2, config2.userMemory.dir);
     if (daily) parts.push("**RECENT DAYS (Nous daily digest):**\n" + daily);
     try {
-      const rules = fs23.readFileSync(path22.join(nousDir(), "RULES.md"), "utf8").trim();
+      const rules = fs24.readFileSync(path23.join(nousDir(), "RULES.md"), "utf8").trim();
       if (rules) parts.push("**SAVE RULES (nous_rules to edit):**\n" + rules);
     } catch {
     }
@@ -27112,6 +27220,20 @@ async function runCli() {
     }
     return true;
   }
+  if (argv.includes("--over-cap")) {
+    const items = scanCapPressure(readDirs(), config2, { overOnly: true }).map((m) => ({
+      name: m.name,
+      type: m.type,
+      description: m.description,
+      memoryDir: m.memoryDir,
+      file: m.file,
+      used: m.used,
+      cap: m.cap,
+      prompt: condensePrompt(m)
+    }));
+    process.stdout.write(JSON.stringify(items) + "\n");
+    return true;
+  }
   if (argv.includes("--pending")) {
     const db = getDb();
     if (!db) return true;
@@ -27133,8 +27255,9 @@ async function runCli() {
     const raw = await readStdin();
     const parsed = parseSummary(raw);
     if (parsed) {
-      writeSummary(db, sid, parsed, config2.userMemory.dir);
-      process.stdout.write("summary written\n");
+      const ok = writeSummary(db, sid, parsed, config2.userMemory.dir);
+      process.stdout.write(ok ? "summary written\n" : `no such session '${sid}' \u2014 nothing written
+`);
     } else {
       writePlaceholder(db, sid);
       process.stdout.write("summary parse failed \u2014 placeholder written\n");

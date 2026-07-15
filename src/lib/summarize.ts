@@ -105,22 +105,26 @@ function sessionDate(db: Db, sessionId: string): string {
 }
 
 // Persist a successful summary to the DB and append the daily digest.
+// Returns false if the session id doesn't resolve to a row — in which case
+// NOTHING is written (no stray digest), so a bad/truncated id can't fabricate a
+// digest entry.
 export function writeSummary(
   db: Db,
   sessionId: string,
   result: SummaryResult,
   memoryBase?: string
-): void {
-  const now = new Date().toISOString();
+): boolean {
   let project = "";
   try {
     const row = db.raw.prepare("SELECT project FROM sessions WHERE session_id=?").get(sessionId);
-    project = (row?.project as string) || "";
+    if (!row) return false; // unknown session — write nothing
+    project = (row.project as string) || "";
   } catch {
-    /* ignore */
+    return false;
   }
+  let changed = 0;
   try {
-    db.raw
+    const res = db.raw
       .prepare(
         "UPDATE sessions SET summary=?, decisions=?, open_threads=?, summarized_at=? WHERE session_id=?"
       )
@@ -128,12 +132,14 @@ export function writeSummary(
         result.summary,
         JSON.stringify(result.decisions),
         JSON.stringify(result.open_threads),
-        now,
+        new Date().toISOString(),
         sessionId
       );
+    changed = Number(res.changes);
   } catch {
-    /* ignore */
+    return false;
   }
+  if (changed === 0) return false;
   appendDigest(
     sessionDate(db, sessionId),
     {
@@ -145,6 +151,7 @@ export function writeSummary(
     },
     memoryBase
   );
+  return true;
 }
 
 // On summarizer failure/timeout, mark the session so nous_check's unsummarized

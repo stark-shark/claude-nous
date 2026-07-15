@@ -54,8 +54,40 @@ const prompt =
   `RECENT TRANSCRIPT:\n${tail}`;
 
 const out = runClaude(prompt, cfg.capture.haikuModel);
-if (!out) process.exit(0);
+if (out) {
+  // Pipe the model's JSON to the staging CLI (writes to the pending queue).
+  runNous(["--stage-proposals"], out, process.cwd(), 8000);
+}
 
-// Pipe the model's JSON to the staging CLI (writes to the pending queue).
-runNous(["--stage-proposals"], out, process.cwd(), 8000);
+// Phase 2 — size-triggered self-maintenance: condense over-cap memories and
+// stage them as approval-gated memory proposals (never silently rewritten).
+try {
+  const rawOver = runNous(["--over-cap"], undefined, process.cwd(), 8000);
+  const over = rawOver ? JSON.parse(rawOver) : [];
+  const proposals = [];
+  for (const m of over.slice(0, 3)) {
+    const condensed = runClaude(m.prompt, cfg.capture.haikuModel);
+    if (!condensed) continue;
+    const body = condensed.trim();
+    if (!body || body.length >= m.used) continue; // only stage a real reduction
+    proposals.push({
+      kind: "memory",
+      target: m.name,
+      note: `condense ${m.name} ${m.used}->${body.length} (cap ${m.cap})`,
+      payload: JSON.stringify({
+        name: m.name,
+        type: m.type,
+        description: m.description,
+        content: body,
+        memoryDir: m.memoryDir,
+      }),
+    });
+  }
+  if (proposals.length) {
+    runNous(["--stage-proposals"], JSON.stringify(proposals), process.cwd(), 8000);
+  }
+} catch {
+  /* maintenance is best-effort */
+}
+
 process.exit(0);
