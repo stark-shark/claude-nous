@@ -1,5 +1,5 @@
 {
-  "name": "recall",
+  "name": "nous",
   "description": "Compressed memory notation system for Claude Code",
   "owner": {
     "name": "stark-shark",
@@ -7,7 +7,7 @@
   },
   "plugins": [
     {
-      "name": "recall",
+      "name": "nous",
       "description": "MCP tools for compressed memory notation — read, write, search, and manage memories with notation enforcement, cross-project search, and health checks.",
       "version": "0.8.0",
       "source": "./"

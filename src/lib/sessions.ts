@@ -4,12 +4,12 @@ import * as path from "node:path";
 // Cold tier: full-text recall over Claude Code's own session transcripts.
 //
 // Claude Code writes every session as JSONL under
-// ~/.claude/projects/<hash>/*.jsonl. Recall's hot tier (memory files) only holds
-// what was distilled; this lets recall_search reach the raw conversation —
+// ~/.claude/projects/<hash>/*.jsonl. Nous's hot tier (memory files) only holds
+// what was distilled; this lets nous_search reach the raw conversation —
 // "did we discuss X three weeks ago?" — which memories alone cannot answer.
 //
 // Implementation is a dependency-free brute scan at query time. At personal
-// scale (hundreds of sessions) this is fast and keeps Recall's zero-runtime-deps
+// scale (hundreds of sessions) this is fast and keeps Nous's zero-runtime-deps
 // promise. A SQLite FTS5 index is a future optimization if scale demands it.
 
 export interface SessionMatch {

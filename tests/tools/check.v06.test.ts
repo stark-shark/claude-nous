@@ -20,7 +20,7 @@ describe("recall_check — lifecycle + caps", () => {
   it("reports lifecycle state counts", () => {
     handleSave({ name: "A", type: "proj", description: "d", content: "x->y :: z" }, tmpDir, DEFAULT_CONFIG);
     const f = path.join(tmpDir, "project_a.md");
-    fs.writeFileSync(f, fs.readFileSync(f, "utf-8").replace("  recall:", "  recall:\n    state: archived"));
+    fs.writeFileSync(f, fs.readFileSync(f, "utf-8").replace("  nous:", "  nous:\n    state: archived"));
     const r = handleCheck({ checks: ["lifecycle"] }, dirs, DEFAULT_CONFIG);
     expect(r.text).toContain("archived: 1");
     expect(r.text).toContain("'A'");
@@ -32,7 +32,7 @@ describe("recall_check — lifecycle + caps", () => {
     const f = path.join(tmpDir, "project_big.md");
     fs.writeFileSync(
       f,
-      `---\nname: big\ndescription: "d"\nmetadata:\n  node_type: memory\n  type: proj\n  recall:\n    accessCount: 0\n---\n${"x->y :: z ".repeat(20)}\n`
+      `---\nname: big\ndescription: "d"\nmetadata:\n  node_type: memory\n  type: proj\n  nous:\n    accessCount: 0\n---\n${"x->y :: z ".repeat(20)}\n`
     );
     const r = handleCheck({ checks: ["caps"] }, dirs, cfg);
     expect(r.text).toMatch(/over by \d+/);

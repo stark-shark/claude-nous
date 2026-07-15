@@ -1,5 +1,5 @@
 {
-  // Keep MEMORY.md updated on every recall_save
+  // Keep MEMORY.md updated on every nous_save
   "maintainIndex": true,
   "indexFile": "MEMORY.md",
   "indexMaxLines": 200, // max index ENTRIES (not raw lines); overflow rotates to MEMORY_ARCHIVE.md
@@ -11,11 +11,11 @@
   // Auto-populated header fields on save/load
   "headerFields": {
     "dates": true,        // C: (created) and U: (updated)
-    "accessCount": true,  // A: incremented on recall_load
+    "accessCount": true,  // A: incremented on nous_load
     "links": true         // L: bidirectional link maintenance
   },
 
-  // Thresholds for recall_check health reports
+  // Thresholds for nous_check health reports
   "healthChecks": {
     "staleDays": 30,              // Days since U: before flagging
     "staleMinAccess": 2,          // Access count below which stale memories get flagged
@@ -24,7 +24,7 @@
 
   // Hermes-style hard caps on the notation body (characters). 0 = unlimited.
   // A save over cap returns a consolidate-or-remove error instead of writing —
-  // it never auto-truncates. Because the body is already Recall notation, a cap
+  // it never auto-truncates. Because the body is already Nous notation, a cap
   // holds far more knowledge than the same cap of raw prose.
   "caps": {
     "fb": 1200,
@@ -37,7 +37,7 @@
   // Prompt-injection defenses (memories are injected into the system prompt)
   "security": {
     "scanOnWrite": true,     // scan content before save
-    "scanOnLoad": true,      // fence + scan content on recall_load
+    "scanOnLoad": true,      // fence + scan content on nous_load
     "rejectInvisible": true  // hard-reject invisible/control unicode on write
   },
 
@@ -49,7 +49,7 @@
   },
 
   // Active mid-session review ("nudge"): every N user turns, prompt the agent to
-  // delegate a memory review to the recall-worker (Haiku) subagent.
+  // delegate a memory review to the nous-worker (Haiku) subagent.
   "review": {
     "enabled": true,
     "everyNTurns": 10,

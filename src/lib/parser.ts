@@ -179,7 +179,8 @@ function parseNewFormat(lines: string[], block: FrontmatterBlock): MemoryHeader 
   if (!VALID_TYPES.includes(typeRaw as MemoryType)) return null;
   const type = typeRaw as MemoryType;
 
-  const recallRaw = meta.recall;
+  // Read-compat: v1 writes metadata.nous; legacy memories use metadata.recall.
+  const recallRaw = meta.nous ?? meta.recall;
   const recall: YamlObject =
     recallRaw && typeof recallRaw === "object" && !Array.isArray(recallRaw)
       ? (recallRaw as YamlObject)
@@ -271,7 +272,7 @@ function parseLegacyFormat(lines: string[], block: FrontmatterBlock): MemoryHead
 
 // Tries the new (Claude Code-compatible) format first. Falls back to the legacy
 // T:/D:/... format. If the new format succeeds but lacks the metadata.recall
-// sub-block, also scans for a legacy block (e.g. an old Recall header that
+// sub-block, also scans for a legacy block (e.g. an old Nous header that
 // Claude Code's normalization left untouched beneath its own frontmatter) and
 // merges in any dates / access count / links from there. This preserves
 // pre-v0.5.0 metadata on files Claude Code has normalized.
@@ -336,7 +337,7 @@ export function serializeHeader(header: MemoryHeader): string {
   lines.push("metadata:");
   lines.push("  node_type: memory");
   lines.push(`  type: ${header.type}`);
-  lines.push("  recall:");
+  lines.push("  nous:");
   if (needsHumanName) {
     lines.push(`    humanName: ${quoteForYaml(header.name)}`);
   }

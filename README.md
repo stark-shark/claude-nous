@@ -1,4 +1,4 @@
-# Recall
+# Nous
 
 [![Support on Ko-fi](https://img.shields.io/badge/Support-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/stark_shark)
 
@@ -6,7 +6,7 @@ Compressed memory notation system for Claude Code. A plugin that provides MCP to
 
 ## What it does
 
-Claude Code's auto-memory system stores project context as markdown files. Recall compresses that content using a fixed symbol grammar (`->`, `::`, `(+)`, `!`, `@`, `>>`, etc.) and entity shortcodes (`$hub`, `$sb`, etc.), reducing token cost 30-65% while preserving search and embedding quality.
+Claude Code's auto-memory system stores project context as markdown files. Nous compresses that content using a fixed symbol grammar (`->`, `::`, `(+)`, `!`, `@`, `>>`, etc.) and entity shortcodes (`$hub`, `$sb`, etc.), reducing token cost 30-65% while preserving search and embedding quality.
 
 The plugin ships with:
 
@@ -16,30 +16,30 @@ The plugin ships with:
 
 ### Hermes-style memory (v0.6–0.7)
 
-Recall borrows the mechanisms that make Nous Research's Hermes memory feel like it "grows with you", layered on top of Recall's compression notation (so a cap holds far more than the same cap of raw prose):
+Nous borrows the mechanisms that make Nous Research's Hermes memory feel like it "grows with you", layered on top of Nous's compression notation (so a cap holds far more than the same cap of raw prose):
 
 - **Hard caps + overflow loop** — each memory body has a character cap (`caps.*`). A save over cap returns a `Cap exceeded` error and writes nothing; the model must consolidate or split, then retry. No auto-truncation, no silent bloat.
 - **Always-loaded global `user.md`** — a `usr`-type memory named `user`/`profile` is stored once at `~/.claude/recall/memory/` (scoped to the user, shared across projects) and injected into context at every session start — the Hermes USER.md — with its own tight cap.
-- **Cold tier** — `recall_search` with `scope:"sessions"` full-text-searches your past Claude Code conversation transcripts, not just distilled memories.
-- **Auto-curation scan** — on session start, low-risk lifecycle transitions (`active → stale → archived`) are applied automatically **to the current project only**; over-cap/duplicate memories are escalated in a scan report. Archived memories leave MEMORY.md but stay searchable. `recall_check` gained `lifecycle` and `caps` reports.
+- **Cold tier** — `nous_search` with `scope:"sessions"` full-text-searches your past Claude Code conversation transcripts, not just distilled memories.
+- **Auto-curation scan** — on session start, low-risk lifecycle transitions (`active → stale → archived`) are applied automatically **to the current project only**; over-cap/duplicate memories are escalated in a scan report. Archived memories leave MEMORY.md but stay searchable. `nous_check` gained `lifecycle` and `caps` reports.
 - **Resurrection-on-access** — loading a stale/archived memory revives it to `active` and re-adds it to MEMORY.md, so memories you actually use never stay buried.
-- **Active review nudge** — every N user turns a `UserPromptSubmit` hook prompts the agent to delegate a memory review to the Haiku `recall-worker`, approval-gated by default (proposes a diff; you confirm before any write).
+- **Active review nudge** — every N user turns a `UserPromptSubmit` hook prompts the agent to delegate a memory review to the Haiku `nous-worker`, approval-gated by default (proposes a diff; you confirm before any write).
 - **Injection defense** — content is scanned on write (invisible/control unicode hard-rejected) and delimiter-fenced on load, since memories are injected into the system prompt.
 
-All of it is config-driven — see `recall.config.reference.md`. Set `caps.*` to `0`, or `scan.enabled` / `review.enabled` / `security.scanOnWrite` to `false`, to opt out of any piece.
+All of it is config-driven — see `nous.config.reference.md`. Set `caps.*` to `0`, or `scan.enabled` / `review.enabled` / `security.scanOnWrite` to `false`, to opt out of any piece.
 
 ## Tools
 
 | Tool | Purpose |
 |---|---|
-| `recall_save` | Write/update a memory with notation enforcement and content-hash dedup |
-| `recall_load` | Read a memory by name or filename; increments access count |
-| `recall_search` | Query memories across all projects (`scope:"memories"`) **or** full-text search past session transcripts (`scope:"sessions"`, the cold tier) |
-| `recall_check` | Health checks: staleness, registry drift, broken links, stats |
-| `recall_decode` | Expand Recall notation to plain English |
-| `recall_registry` | CRUD for entity shortcodes in REGISTRY.md |
-| `recall_export` | Export memories to a JSON backup |
-| `recall_import` | Restore memories from a JSON backup |
+| `nous_save` | Write/update a memory with notation enforcement and content-hash dedup |
+| `nous_load` | Read a memory by name or filename; increments access count |
+| `nous_search` | Query memories across all projects (`scope:"memories"`) **or** full-text search past session transcripts (`scope:"sessions"`, the cold tier) |
+| `nous_check` | Health checks: staleness, registry drift, broken links, stats |
+| `nous_decode` | Expand Nous notation to plain English |
+| `nous_registry` | CRUD for entity shortcodes in REGISTRY.md |
+| `nous_export` | Export memories to a JSON backup |
+| `nous_import` | Restore memories from a JSON backup |
 
 ## Installation
 
@@ -48,14 +48,14 @@ Prerequisite: Node.js 20+ on PATH (Claude Code launches the MCP server with it; 
 Run these three slash commands in Claude Code:
 
 ```
-/plugin marketplace add stark-shark/claude-recall
+/plugin marketplace add stark-shark/claude-nous
 /plugin install recall@recall
 /reload-plugins
 ```
 
 That's it. The plugin self-registers its MCP server and SessionStart hook — no `~/.claude/settings.json` editing, no `.mcp.json` editing, no `npm install` or build step on your end (the bundled `dist/` ships with the repo).
 
-Verify with `/plugin` (Recall should show enabled), `/mcp` (the recall server should show connected), and `/recall-help` (renders the in-plugin help — see [`/recall-help`](#recall-help) below).
+Verify with `/plugin` (Nous should show enabled), `/mcp` (the recall server should show connected), and `/nous-help` (renders the in-plugin help — see [`/nous-help`](#nous-help) below).
 
 ### Upgrade
 
@@ -79,17 +79,17 @@ To also forget the marketplace source (full wipe):
 /plugin marketplace remove recall
 ```
 
-### `/recall-help`
+### `/nous-help`
 
-Once installed, type `/recall-help` in Claude Code for an in-session overview — all 8 tools, the symbol cheatsheet, the memory file format, install/upgrade/uninstall commands, and links to the deeper docs. Useful when you forget the notation or want to remind yourself what `recall_check --links` does without leaving the editor.
+Once installed, type `/nous-help` in Claude Code for an in-session overview — all 8 tools, the symbol cheatsheet, the memory file format, install/upgrade/uninstall commands, and links to the deeper docs. Useful when you forget the notation or want to remind yourself what `nous_check --links` does without leaving the editor.
 
 ### Install from local clone (for development)
 
 If you want to modify the plugin:
 
 ```bash
-git clone https://github.com/stark-shark/claude-recall.git
-cd claude-recall
+git clone https://github.com/stark-shark/claude-nous.git
+cd claude-nous
 npm install
 npm run build      # esbuild bundle → dist/index.js
 ```
@@ -97,7 +97,7 @@ npm run build      # esbuild bundle → dist/index.js
 Then point the marketplace at the local directory instead of GitHub:
 
 ```
-/plugin marketplace add <absolute-path-to-claude-recall>
+/plugin marketplace add <absolute-path-to-claude-nous>
 /plugin install recall@recall
 /reload-plugins
 ```
@@ -107,10 +107,10 @@ Then point the marketplace at the local directory instead of GitHub:
 On first run, copy the default config:
 
 ```bash
-cp recall.config.default.jsonc recall.config.jsonc
+cp nous.config.default.jsonc nous.config.jsonc
 ```
 
-Edit `recall.config.jsonc` to customize. See `recall.config.reference.md` for all available settings.
+Edit `nous.config.jsonc` to customize. See `nous.config.reference.md` for all available settings.
 
 Key settings:
 
@@ -121,7 +121,7 @@ Key settings:
 
 ## Memory Format (v0.5.0+)
 
-Memories are markdown files with a YAML frontmatter header in Claude Code's native auto-memory format. Recall data lives under `metadata.recall.*`:
+Memories are markdown files with a YAML frontmatter header in Claude Code's native auto-memory format. Nous data lives under `metadata.recall.*`:
 
 ```yaml
 ---
@@ -140,14 +140,14 @@ metadata:
       - linked_b
 ---
 
-<body content using Recall notation>
+<body content using Nous notation>
 ```
 
-This format lets Claude Code's native auto-memory system and Recall co-exist on the same files. Claude Code touches `name`, `description`, and `metadata.type`; Recall owns `metadata.recall.*`. Neither overwrites the other.
+This format lets Claude Code's native auto-memory system and Nous co-exist on the same files. Claude Code touches `name`, `description`, and `metadata.type`; Nous owns `metadata.recall.*`. Neither overwrites the other.
 
 **Legacy format compatibility:** older files using a `T:<type> | <name>` / `D:` / `C:` / `U:` / `A:` / `L:` header still parse. New saves rewrite them to the format above — no manual migration required.
 
-## Recall Notation
+## Nous Notation
 
 12 ASCII operators (no Unicode):
 
@@ -181,7 +181,7 @@ Memories live in Claude Code's standard project memory directory:
   *.md             # individual memory files
 ```
 
-Recall never moves memories — it just reads and writes to the existing location. If the plugin isn't running, Claude Code still auto-loads MEMORY.md as usual.
+Nous never moves memories — it just reads and writes to the existing location. If the plugin isn't running, Claude Code still auto-loads MEMORY.md as usual.
 
 ## Development
 
@@ -201,6 +201,6 @@ MIT — see [LICENSE](LICENSE).
 
 ## Support
 
-If you find Recall useful, consider supporting development:
+If you find Nous useful, consider supporting development:
 
 [![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/stark_shark)

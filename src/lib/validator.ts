@@ -67,7 +67,7 @@ export function validateNotation(
     const expectedMin = Math.floor(lines.length / 5);
     if (symbolCount < expectedMin) {
       warnings.push(
-        `Low symbol density: ${symbolCount} symbols in ${lines.length} lines (excluding code blocks). Expected at least ${expectedMin}. Content may not be using Recall notation.`
+        `Low symbol density: ${symbolCount} symbols in ${lines.length} lines (excluding code blocks). Expected at least ${expectedMin}. Content may not be using Nous notation.`
       );
     }
   }

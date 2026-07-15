@@ -3,10 +3,10 @@ import * as path from "node:path";
 
 export const DECODER_FILENAME = "RECALL_NOTATION.md";
 
-const DECODER_CONTENT = `# Recall Notation Cheatsheet
+const DECODER_CONTENT = `# Nous Notation Cheatsheet
 
-Memories in this directory are written in Recall notation — a compressed symbol
-grammar used by the [Recall](https://github.com/stark-shark/claude-recall) Claude
+Memories in this directory are written in Nous notation — a compressed symbol
+grammar used by the [Nous](https://github.com/stark-shark/claude-nous) Claude
 Code plugin. This file is regenerated on every save so you can always decode the
 memories yourself, even without the plugin installed.
 
@@ -34,7 +34,7 @@ in this same directory. Look there to see what each one expands to.
 
 ## Memory File Header (v0.5.0+)
 
-Every memory begins with a YAML frontmatter block in Claude Code's native auto-memory format, with Recall-specific data nested under \`metadata.recall\`:
+Every memory begins with a YAML frontmatter block in Claude Code's native auto-memory format, with Nous-specific data nested under \`metadata.recall\`:
 
 \`\`\`yaml
 ---
@@ -47,16 +47,16 @@ metadata:
     humanName: "Human Readable Name"   # optional — only when it differs from the slug
     created: 2026-05-29                # YYYY-MM-DD (set once)
     updated: 2026-05-29                # YYYY-MM-DD (updated on save)
-    accessCount: 0                     # incremented on each recall_load
+    accessCount: 0                     # incremented on each nous_load
     links:
       - linked_memory_a                # filenames without .md
       - linked_memory_b
 ---
 
-<body in Recall notation>
+<body in Nous notation>
 \`\`\`
 
-**Older files** (pre-v0.5.0) may use a legacy header with \`T:<type> | <name>\`, \`D:\`, \`C:\`, \`U:\`, \`A:\`, \`L:\` lines between two \`---\` markers. Recall reads both formats. New saves always use the newer format above.
+**Older files** (pre-v0.5.0) may use a legacy header with \`T:<type> | <name>\`, \`D:\`, \`C:\`, \`U:\`, \`A:\`, \`L:\` lines between two \`---\` markers. Nous reads both formats. New saves always use the newer format above.
 
 ## Index
 
@@ -65,12 +65,12 @@ line per memory with a short description. Open that first to browse.
 
 ## More
 
-- Plugin + reinstall: https://github.com/stark-shark/claude-recall
-- Full language spec: https://github.com/stark-shark/claude-recall/blob/main/docs/specs/2026-04-08-recall-language-design.md
+- Plugin + reinstall: https://github.com/stark-shark/claude-nous
+- Full language spec: https://github.com/stark-shark/claude-nous/blob/main/docs/specs/2026-04-08-recall-language-design.md
 
 ---
 
-*This file is maintained by the Recall plugin. It is safe to delete — it will be
+*This file is maintained by the Nous plugin. It is safe to delete — it will be
 recreated the next time a memory is saved. Edit if you want a custom cheatsheet;
 it will be overwritten only if the file is missing.*
 `;

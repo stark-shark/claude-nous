@@ -1,11 +1,11 @@
-# Recall Configuration Reference
+# Nous Configuration Reference
 
 ## Settings
 
 ### maintainIndex
 - **Type:** boolean
 - **Default:** true
-- **Description:** When true, recall_save updates MEMORY.md index after every write. Disable if you rely solely on recall_search and don't want the index file.
+- **Description:** When true, nous_save updates MEMORY.md index after every write. Disable if you rely solely on nous_search and don't want the index file.
 
 ### indexFile
 - **Type:** string
@@ -26,7 +26,7 @@
 - **Type:** "strict" | "warn" | "off"
 - **Default:** "warn"
 - **Values:**
-  - `strict` — Rejects saves that don't pass Recall notation validation. Returns error with specific failures.
+  - `strict` — Rejects saves that don't pass Nous notation validation. Returns error with specific failures.
   - `warn` — Saves the memory but returns warnings about notation issues.
   - `off` — No validation. Raw passthrough.
 
@@ -38,7 +38,7 @@
 ### headerFields.accessCount
 - **Type:** boolean
 - **Default:** true
-- **Description:** Increment A: (access count) field in memory headers on recall_load.
+- **Description:** Increment A: (access count) field in memory headers on nous_load.
 
 ### headerFields.links
 - **Type:** boolean
@@ -48,7 +48,7 @@
 ### healthChecks.staleDays
 - **Type:** number
 - **Default:** 30
-- **Description:** Number of days since U: (last updated) before a memory is flagged as stale by recall_check.
+- **Description:** Number of days since U: (last updated) before a memory is flagged as stale by nous_check.
 
 ### healthChecks.staleMinAccess
 - **Type:** number
@@ -58,14 +58,14 @@
 ### healthChecks.compressionTolerancePct
 - **Type:** number
 - **Default:** 10
-- **Description:** Allowed percentage above target compression ratio before recall_check flags a memory as verbose.
+- **Description:** Allowed percentage above target compression ratio before nous_check flags a memory as verbose.
 
 ## Hermes-style mechanics (v0.6)
 
 ### caps
 - **Type:** object — `{ fb, proj, ref, usr, user }`, each a number (characters; 0 = unlimited)
 - **Default:** `{ fb: 1200, proj: 2200, ref: 2200, usr: 1375, user: 1375 }`
-- **Description:** Hard cap on each memory's notation body. A `recall_save` over the cap returns a `Cap exceeded` error and writes **nothing** — the model must consolidate, split, or remove content and retry in the same turn. Recall never auto-truncates. Because the body is already compressed notation, a cap holds far more knowledge than the same cap of raw prose. `user` is the cap for the special `user.md` profile; the others are by memory type.
+- **Description:** Hard cap on each memory's notation body. A `nous_save` over the cap returns a `Cap exceeded` error and writes **nothing** — the model must consolidate, split, or remove content and retry in the same turn. Nous never auto-truncates. Because the body is already compressed notation, a cap holds far more knowledge than the same cap of raw prose. `user` is the cap for the special `user.md` profile; the others are by memory type.
 
 ### security.scanOnWrite
 - **Type:** boolean
@@ -75,7 +75,7 @@
 ### security.scanOnLoad
 - **Type:** boolean
 - **Default:** true
-- **Description:** On `recall_load`, scan the content and wrap it in `<<RECALL …>>` delimiter fences so a memory cannot impersonate system/agent framing (Hermes' "Brainworm" defense). A warning banner is prepended if the memory trips any rule.
+- **Description:** On `nous_load`, scan the content and wrap it in `<<NOUS …>>` delimiter fences so a memory cannot impersonate system/agent framing (Hermes' "Brainworm" defense). A warning banner is prepended if the memory trips any rule.
 
 ### security.rejectInvisible
 - **Type:** boolean
@@ -103,7 +103,7 @@ The auto-apply scan only mutates the **current project** (the cwd the session wa
 ### review.enabled
 - **Type:** boolean
 - **Default:** true
-- **Description:** Master switch for the active mid-session review nudge (a `UserPromptSubmit` hook). When on, every `everyNTurns` user turns a `<RECALL_REVIEW>` block is injected so the agent delegates a memory review to the recall-worker subagent.
+- **Description:** Master switch for the active mid-session review nudge (a `UserPromptSubmit` hook). When on, every `everyNTurns` user turns a `<NOUS_REVIEW>` block is injected so the agent delegates a memory review to the nous-worker subagent.
 
 ### review.everyNTurns
 - **Type:** number

@@ -3222,8 +3222,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path16) {
-      let input = path16;
+    function removeDotSegments(path17) {
+      let input = path17;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3422,8 +3422,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path16, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path16 && path16 !== "/" ? path16 : void 0;
+        const [path17, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path17 && path17 !== "/" ? path17 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -6785,12 +6785,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs16, exportName) {
+    function addFormats(ajv, list, fs17, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs16[f]);
+        ajv.addFormat(f, fs17[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -7157,8 +7157,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path16, errorMaps, issueData } = params;
-  const fullPath = [...path16, ...issueData.path || []];
+  const { data, path: path17, errorMaps, issueData } = params;
+  const fullPath = [...path17, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7273,11 +7273,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path16, key) {
+  constructor(parent, value, path17, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path16;
+    this._path = path17;
     this._key = key;
   }
   get path() {
@@ -10921,10 +10921,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path16) {
-  if (!path16)
+function getElementAtPath(obj, path17) {
+  if (!path17)
     return obj;
-  return path16.reduce((acc, key) => acc?.[key], obj);
+  return path17.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11307,11 +11307,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path16, issues) {
+function prefixIssues(path17, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path16);
+    iss.path.unshift(path17);
     return iss;
   });
 }
@@ -23220,8 +23220,8 @@ var StdioServerTransport = class {
 };
 
 // src/index.ts
-import * as path15 from "node:path";
-import * as os2 from "node:os";
+import * as path16 from "node:path";
+import * as os3 from "node:os";
 
 // src/lib/config.ts
 import * as fs from "node:fs";
@@ -23282,7 +23282,7 @@ function loadConfig(configPath) {
     userConfig = JSON.parse(stripped);
   } catch (err) {
     console.error(
-      `[recall] Failed to parse config at ${configPath}: ${err.message}. Using defaults.`
+      `[nous] Failed to parse config at ${configPath}: ${err.message}. Using defaults.`
     );
     return { ...DEFAULT_CONFIG };
   }
@@ -23354,7 +23354,7 @@ function ensureMemoryDir(projectHash, projectsRoot = DEFAULT_PROJECTS_ROOT) {
   return memDir;
 }
 function getGlobalMemoryDir() {
-  return path.join(os.homedir(), ".claude", "recall", "memory");
+  return path.join(os.homedir(), ".claude", "nous", "memory");
 }
 function ensureGlobalMemoryDir() {
   const dir = getGlobalMemoryDir();
@@ -23523,7 +23523,7 @@ function parseNewFormat(lines, block) {
   if (typeof typeRaw !== "string") return null;
   if (!VALID_TYPES.includes(typeRaw)) return null;
   const type = typeRaw;
-  const recallRaw = meta3.recall;
+  const recallRaw = meta3.nous ?? meta3.recall;
   const recall = recallRaw && typeof recallRaw === "object" && !Array.isArray(recallRaw) ? recallRaw : {};
   const nameSlug = typeof data.name === "string" ? data.name : "";
   const humanName = typeof recall.humanName === "string" ? recall.humanName : "";
@@ -23630,7 +23630,7 @@ function serializeHeader(header) {
   lines.push("metadata:");
   lines.push("  node_type: memory");
   lines.push(`  type: ${header.type}`);
-  lines.push("  recall:");
+  lines.push("  nous:");
   if (needsHumanName) {
     lines.push(`    humanName: ${quoteForYaml(header.name)}`);
   }
@@ -23734,7 +23734,7 @@ function validateNotation(content, type) {
     const expectedMin = Math.floor(lines.length / 5);
     if (symbolCount < expectedMin) {
       warnings.push(
-        `Low symbol density: ${symbolCount} symbols in ${lines.length} lines (excluding code blocks). Expected at least ${expectedMin}. Content may not be using Recall notation.`
+        `Low symbol density: ${symbolCount} symbols in ${lines.length} lines (excluding code blocks). Expected at least ${expectedMin}. Content may not be using Nous notation.`
       );
     }
   }
@@ -23961,10 +23961,10 @@ ${body}`;
 import * as fs6 from "node:fs";
 import * as path4 from "node:path";
 var DECODER_FILENAME = "RECALL_NOTATION.md";
-var DECODER_CONTENT = `# Recall Notation Cheatsheet
+var DECODER_CONTENT = `# Nous Notation Cheatsheet
 
-Memories in this directory are written in Recall notation \u2014 a compressed symbol
-grammar used by the [Recall](https://github.com/stark-shark/claude-recall) Claude
+Memories in this directory are written in Nous notation \u2014 a compressed symbol
+grammar used by the [Nous](https://github.com/stark-shark/claude-nous) Claude
 Code plugin. This file is regenerated on every save so you can always decode the
 memories yourself, even without the plugin installed.
 
@@ -23992,7 +23992,7 @@ in this same directory. Look there to see what each one expands to.
 
 ## Memory File Header (v0.5.0+)
 
-Every memory begins with a YAML frontmatter block in Claude Code's native auto-memory format, with Recall-specific data nested under \`metadata.recall\`:
+Every memory begins with a YAML frontmatter block in Claude Code's native auto-memory format, with Nous-specific data nested under \`metadata.recall\`:
 
 \`\`\`yaml
 ---
@@ -24005,16 +24005,16 @@ metadata:
     humanName: "Human Readable Name"   # optional \u2014 only when it differs from the slug
     created: 2026-05-29                # YYYY-MM-DD (set once)
     updated: 2026-05-29                # YYYY-MM-DD (updated on save)
-    accessCount: 0                     # incremented on each recall_load
+    accessCount: 0                     # incremented on each nous_load
     links:
       - linked_memory_a                # filenames without .md
       - linked_memory_b
 ---
 
-<body in Recall notation>
+<body in Nous notation>
 \`\`\`
 
-**Older files** (pre-v0.5.0) may use a legacy header with \`T:<type> | <name>\`, \`D:\`, \`C:\`, \`U:\`, \`A:\`, \`L:\` lines between two \`---\` markers. Recall reads both formats. New saves always use the newer format above.
+**Older files** (pre-v0.5.0) may use a legacy header with \`T:<type> | <name>\`, \`D:\`, \`C:\`, \`U:\`, \`A:\`, \`L:\` lines between two \`---\` markers. Nous reads both formats. New saves always use the newer format above.
 
 ## Index
 
@@ -24023,12 +24023,12 @@ line per memory with a short description. Open that first to browse.
 
 ## More
 
-- Plugin + reinstall: https://github.com/stark-shark/claude-recall
-- Full language spec: https://github.com/stark-shark/claude-recall/blob/main/docs/specs/2026-04-08-recall-language-design.md
+- Plugin + reinstall: https://github.com/stark-shark/claude-nous
+- Full language spec: https://github.com/stark-shark/claude-nous/blob/main/docs/specs/2026-04-08-recall-language-design.md
 
 ---
 
-*This file is maintained by the Recall plugin. It is safe to delete \u2014 it will be
+*This file is maintained by the Nous plugin. It is safe to delete \u2014 it will be
 recreated the next time a memory is saved. Edit if you want a custom cheatsheet;
 it will be overwritten only if the file is missing.*
 `;
@@ -24066,11 +24066,11 @@ function usageLine(type, filename, usage, config3) {
 function overflowError(name, type, usage, existingBody) {
   const lines = [
     `Cap exceeded: '${name}' (${type}) at ${usage.used}/${usage.cap} chars \u2014 over by ${usage.over}.`,
-    `Recall caps force consolidation. In THIS turn, do one of:`,
+    `Nous caps force consolidation. In THIS turn, do one of:`,
     `  \u2022 tighten the notation (drop articles/filler, use $shortcodes and operators -> :: >> @)`,
     `  \u2022 split a distinct sub-topic into a separate linked memory`,
     `  \u2022 remove stale or superseded lines`,
-    `then retry recall_save. Nothing was written.`
+    `then retry nous_save. Nothing was written.`
   ];
   if (existingBody !== null) {
     lines.push("", "Current saved body (consolidate against this):", "---", existingBody, "---");
@@ -24142,9 +24142,9 @@ function scanContent(text) {
   return { threats, hasHard: threats.some((t) => t.severity === "hard") };
 }
 function fence(label, body) {
-  return `<<RECALL ${label}>>
+  return `<<NOUS ${label}>>
 ${body}
-<<END RECALL>>`;
+<<END NOUS>>`;
 }
 
 // src/tools/save.ts
@@ -24208,7 +24208,7 @@ Nothing was written. Remove the flagged characters and retry.`,
         text: `Notation validation failed:
 ${validation.errors.join("\n")}
 
-Compress using the Recall symbol grammar before saving.`,
+Compress using the Nous symbol grammar before saving.`,
         isError: true,
         warnings: [],
         filename
@@ -24298,7 +24298,7 @@ ${input.content}
     );
     if (archived > 0) {
       warnings.push(
-        `${config3.indexFile} reached indexMaxLines (${config3.indexMaxLines} entries); moved ${archived} oldest entr${archived === 1 ? "y" : "ies"} to ${ARCHIVE_FILENAME}. Memory files themselves are untouched \u2014 restore an entry by moving its line back, or raise indexMaxLines in recall.config.jsonc.`
+        `${config3.indexFile} reached indexMaxLines (${config3.indexMaxLines} entries); moved ${archived} oldest entr${archived === 1 ? "y" : "ies"} to ${ARCHIVE_FILENAME}. Memory files themselves are untouched \u2014 restore an entry by moving its line back, or raise indexMaxLines in nous.config.jsonc.`
       );
     }
   }
@@ -24316,7 +24316,7 @@ ${input.content}
       }
     } catch (err) {
       warnings.push(
-        `Bidirectional link update failed: ${err.message}. The memory was saved, but some target links may not point back. Run recall_check --links to verify.`
+        `Bidirectional link update failed: ${err.message}. The memory was saved, but some target links may not point back. Run nous_check --links to verify.`
       );
     }
   }
@@ -25239,9 +25239,9 @@ function runScan(memoryDirs, config3, now = Date.now()) {
 }
 function formatReport(report) {
   if (report.toStale.length === 0 && report.toArchived.length === 0 && report.overCap.length === 0 && report.duplicates.length === 0) {
-    return `Recall scan: ${report.scanned} memories, all healthy.`;
+    return `Nous scan: ${report.scanned} memories, all healthy.`;
   }
-  const lines = [`Recall scan: ${report.scanned} memories`];
+  const lines = [`Nous scan: ${report.scanned} memories`];
   if (report.toArchived.length)
     lines.push(`  archived ${report.toArchived.length}: ${report.toArchived.join(", ")}`);
   if (report.toStale.length)
@@ -25253,10 +25253,68 @@ function formatReport(report) {
   return lines.join("\n");
 }
 
+// src/lib/migrate.ts
+import * as fs16 from "node:fs";
+import * as path15 from "node:path";
+import * as os2 from "node:os";
+var LEGACY_DIR = path15.join(os2.homedir(), ".claude", "recall");
+var NOUS_DIR = path15.join(os2.homedir(), ".claude", "nous");
+var MARKER = path15.join(LEGACY_DIR, "MIGRATED.md");
+function copyDirRecursive(src, dest) {
+  if (!fs16.existsSync(src)) return;
+  fs16.mkdirSync(dest, { recursive: true });
+  for (const entry of fs16.readdirSync(src, { withFileTypes: true })) {
+    const s = path15.join(src, entry.name);
+    const d = path15.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      copyDirRecursive(s, d);
+    } else if (entry.isFile()) {
+      if (!fs16.existsSync(d)) fs16.copyFileSync(s, d);
+    }
+  }
+}
+function migrateFromRecall(legacyDir = LEGACY_DIR, nousDir = NOUS_DIR, marker = MARKER) {
+  const result = { ran: false, copied: [] };
+  try {
+    if (fs16.existsSync(nousDir)) return result;
+    if (!fs16.existsSync(legacyDir)) return result;
+    if (fs16.existsSync(marker)) return result;
+    fs16.mkdirSync(nousDir, { recursive: true });
+    const legacyMem = path15.join(legacyDir, "memory");
+    if (fs16.existsSync(legacyMem)) {
+      copyDirRecursive(legacyMem, path15.join(nousDir, "memory"));
+      result.copied.push("memory/");
+    }
+    const legacyState = path15.join(legacyDir, "state");
+    if (fs16.existsSync(legacyState)) {
+      copyDirRecursive(legacyState, path15.join(nousDir, "state"));
+      result.copied.push("state/");
+    }
+    const legacyCfg = path15.join(legacyDir, "recall.config.jsonc");
+    const nousCfg = path15.join(nousDir, "nous.config.jsonc");
+    if (fs16.existsSync(legacyCfg) && !fs16.existsSync(nousCfg)) {
+      fs16.copyFileSync(legacyCfg, nousCfg);
+      result.copied.push("nous.config.jsonc");
+    }
+    try {
+      fs16.writeFileSync(
+        marker,
+        "# Migrated to Nous\n\nThis Recall data dir was copied to `~/.claude/nous` by Nous v1.0.0.\nThe copy is non-destructive \u2014 this dir is left intact. You may delete it once satisfied.\n",
+        "utf8"
+      );
+    } catch {
+    }
+    result.ran = true;
+  } catch {
+  }
+  return result;
+}
+
 // src/index.ts
-var VERSION = true ? "0.8.0" : "0.0.0-dev";
-var SERVER_DIR = path15.join(os2.homedir(), ".claude", "recall");
-var CONFIG_PATH = path15.join(SERVER_DIR, "recall.config.jsonc");
+var VERSION = typeof __NOUS_VERSION__ === "string" ? __NOUS_VERSION__ : "0.0.0-dev";
+migrateFromRecall();
+var SERVER_DIR = path16.join(os3.homedir(), ".claude", "nous");
+var CONFIG_PATH = path16.join(SERVER_DIR, "nous.config.jsonc");
 var config2 = loadConfig(CONFIG_PATH);
 var GLOBAL_MEMORY_DIR = ensureGlobalMemoryDir();
 config2.userMemory.dir = GLOBAL_MEMORY_DIR;
@@ -25268,22 +25326,22 @@ function readDirs() {
   return dirs;
 }
 var server = new McpServer(
-  { name: "recall", version: VERSION },
+  { name: "nous", version: VERSION },
   {
     capabilities: { logging: {} },
     instructions: [
-      "Recall \u2014 compressed memory notation system for Claude Code auto-memory.",
+      "Nous \u2014 compressed memory notation system for Claude Code auto-memory.",
       "",
-      "TOOLS: recall_save (write with notation enforcement), recall_load (read with access tracking),",
-      "recall_search (cross-project query), recall_check (health checks), recall_decode (expand to plain English),",
-      "recall_registry (entity shortcode CRUD), recall_export/recall_import (backup/restore).",
+      "TOOLS: nous_save (write with notation enforcement), nous_load (read with access tracking),",
+      "nous_search (cross-project query), nous_check (health checks), nous_decode (expand to plain English),",
+      "nous_registry (entity shortcode CRUD), nous_export/nous_import (backup/restore).",
       "",
-      "TASK DISPLAY (MANDATORY): EVERY recall_* tool call MUST be wrapped in TaskCreate/TaskUpdate.",
+      "TASK DISPLAY (MANDATORY): EVERY nous_* tool call MUST be wrapped in TaskCreate/TaskUpdate.",
       "Set activeForm on the FIRST task to brand the operation:",
       "  Loading/searching: 'Recalling memories\u2026'",
       "  Saving: 'Storing memories\u2026'",
       "  Health checks: 'Checking memory health\u2026'",
-      "Task subjects are short descriptions WITHOUT a 'Recall \u2014' prefix.",
+      "Task subjects are short descriptions WITHOUT a 'Nous \u2014' prefix.",
       "",
       "MULTI-TOPIC RETRIEVAL: Identify ALL topics in the user's request. Create ALL tasks upfront.",
       "Example: TaskCreate({subject:'Loading GP Integration', activeForm:'Recalling memories\u2026'}),",
@@ -25292,18 +25350,18 @@ var server = new McpServer(
   }
 );
 function getProjectsRoot() {
-  return path15.join(os2.homedir(), ".claude", "projects");
+  return path16.join(os3.homedir(), ".claude", "projects");
 }
 server.registerTool(
-  "recall_save",
+  "nous_save",
   {
     title: "Save Memory",
-    description: "Write or update a memory file with Recall notation enforcement, dedup check, and index update. Enforces a hard character cap on the body: a save over cap returns a 'Cap exceeded' error and writes nothing \u2014 consolidate or split, then retry THIS turn. A usr-type memory named 'user' or 'profile' is routed to the always-loaded user.md profile. Content is security-scanned before write.",
+    description: "Write or update a memory file with Nous notation enforcement, dedup check, and index update. Enforces a hard character cap on the body: a save over cap returns a 'Cap exceeded' error and writes nothing \u2014 consolidate or split, then retry THIS turn. A usr-type memory named 'user' or 'profile' is routed to the always-loaded user.md profile. Content is security-scanned before write.",
     inputSchema: object2({
       name: string2().describe("Memory name (e.g. 'FK CASCADE')"),
       type: _enum(["fb", "proj", "ref", "usr"]).describe("Memory type"),
       description: string2().describe("One-line description for relevance matching"),
-      content: string2().describe("Memory content in Recall notation"),
+      content: string2().describe("Memory content in Nous notation"),
       links: array(string2()).optional().describe("Linked memory filenames (without .md)")
     })
   },
@@ -25318,14 +25376,14 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "recall_load",
+  "nous_load",
   {
     title: "Load Memory",
     description: "Read a memory file. Increments access count. Use expanded=true for decoded plain English.",
     inputSchema: object2({
       name: string2().optional().describe("Memory name to search for"),
       file: string2().optional().describe("Exact filename (e.g. feedback_fk_cascade.md)"),
-      expanded: boolean2().optional().describe("Return decoded plain English instead of raw Recall notation")
+      expanded: boolean2().optional().describe("Return decoded plain English instead of raw Nous notation")
     })
   },
   async ({ name, file: file2, expanded }) => {
@@ -25338,7 +25396,7 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "recall_search",
+  "nous_search",
   {
     title: "Search Memories",
     description: "Query memories (hot tier, headers only) OR past Claude Code session transcripts (cold tier, full text). scope='memories' (default) searches distilled memory files; scope='sessions' searches raw conversation history \u2014 use it for 'did we discuss X?' recall that was never saved as a memory.",
@@ -25363,7 +25421,7 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "recall_check",
+  "nous_check",
   {
     title: "Health Check",
     description: "Run health checks: staleness, registry drift, compression, links, duplicates, stats.",
@@ -25380,10 +25438,10 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "recall_decode",
+  "nous_decode",
   {
     title: "Decode Memory",
-    description: "Decode a memory from Recall notation to plain English.",
+    description: "Decode a memory from Nous notation to plain English.",
     inputSchema: object2({
       name: string2().optional().describe("Memory name to decode"),
       file: string2().optional().describe("Exact filename"),
@@ -25400,7 +25458,7 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "recall_registry",
+  "nous_registry",
   {
     title: "Manage Registry",
     description: "View, add, update, or remove entity shortcodes in REGISTRY.md.",
@@ -25421,7 +25479,7 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "recall_export",
+  "nous_export",
   {
     title: "Export Memories",
     description: "Export memories to a JSON backup file.",
@@ -25440,7 +25498,7 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "recall_import",
+  "nous_import",
   {
     title: "Import Memories",
     description: "Import memories from a JSON backup file.",
@@ -25460,7 +25518,7 @@ server.registerTool(
 );
 function runScanCli() {
   if (!config2.scan.enabled) {
-    process.stdout.write("Recall scan: disabled in config.\n");
+    process.stdout.write("Nous scan: disabled in config.\n");
     return;
   }
   const hash2 = getCurrentProjectHash();
@@ -25469,13 +25527,16 @@ function runScanCli() {
   process.stdout.write(formatReport(report) + "\n");
 }
 async function main() {
+  if (process.argv.includes("--migrate")) {
+    return;
+  }
   if (process.argv.includes("--scan")) {
     runScanCli();
     return;
   }
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Recall MCP server running on stdio");
+  console.error("Nous MCP server running on stdio");
 }
 main().catch((error2) => {
   console.error("Fatal error:", error2);

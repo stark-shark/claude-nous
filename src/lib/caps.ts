@@ -2,7 +2,7 @@ import type { RecallConfig } from "./config.js";
 import type { MemoryType } from "./symbols.js";
 
 // Hermes-style bounded memory: hard caps on the notation body force the model to
-// consolidate instead of endlessly appending. Because the body is already Recall
+// consolidate instead of endlessly appending. Because the body is already Nous
 // notation, a cap holds far more knowledge than the same cap of raw prose.
 
 /**
@@ -61,11 +61,11 @@ export function overflowError(
 ): string {
   const lines = [
     `Cap exceeded: '${name}' (${type}) at ${usage.used}/${usage.cap} chars — over by ${usage.over}.`,
-    `Recall caps force consolidation. In THIS turn, do one of:`,
+    `Nous caps force consolidation. In THIS turn, do one of:`,
     `  • tighten the notation (drop articles/filler, use $shortcodes and operators -> :: >> @)`,
     `  • split a distinct sub-topic into a separate linked memory`,
     `  • remove stale or superseded lines`,
-    `then retry recall_save. Nothing was written.`,
+    `then retry nous_save. Nothing was written.`,
   ];
   if (existingBody !== null) {
     lines.push("", "Current saved body (consolidate against this):", "---", existingBody, "---");

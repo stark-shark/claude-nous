@@ -1,4 +1,4 @@
-# Recall — Compressed Memory Language Spec
+# Nous — Compressed Memory Language Spec
 
 **Date:** 2026-04-08
 **Status:** Approved
@@ -251,7 +251,7 @@ Interactive mode — lists memory files with type badges, user selects one, deco
 ```
 $ python recall/decode.py
 
-  Recall Memory Decoder
+  Nous Memory Decoder
   ─────────────────────
   1. [fb]   FK CASCADE
   2. [fb]   Token & Cost Discipline
@@ -318,9 +318,9 @@ Mechanical triggers (timers, per-commit) produce low-signal memories. Only write
 
 ## 12. MCP Server
 
-The Recall MCP server (`~/.claude/recall/`) provides runtime tooling for memory operations. Design spec: `_plans/superpowers/specs/2026-04-14-recall-mcp-server-design.md`.
+The Nous MCP server (`~/.claude/recall/`) provides runtime tooling for memory operations. Design spec: `_plans/superpowers/specs/2026-04-14-nous-mcp-server-design.md`.
 
-Tools: `recall_save`, `recall_load`, `recall_search`, `recall_check`, `recall_decode`, `recall_registry`, `recall_export`, `recall_import`.
+Tools: `nous_save`, `nous_load`, `nous_search`, `nous_check`, `nous_decode`, `nous_registry`, `nous_export`, `nous_import`.
 
 The server enforces notation at write time, tracks access counts, maintains bidirectional links, and provides cross-project memory search. The Python decoder (`decode.py`) remains as a standalone fallback.
 

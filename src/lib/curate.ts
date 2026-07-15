@@ -114,7 +114,7 @@ export function runScan(
         if (next === "archived") {
           report.toArchived.push(header.name);
           // Archived memories leave the hot index so they drop out of context,
-          // but remain findable via recall_search.
+          // but remain findable via nous_search.
           try {
             removeIndexEntry(path.join(memoryDir, config.indexFile), f);
           } catch {
@@ -135,9 +135,9 @@ export function formatReport(report: CurateReport): string {
     report.overCap.length === 0 &&
     report.duplicates.length === 0
   ) {
-    return `Recall scan: ${report.scanned} memories, all healthy.`;
+    return `Nous scan: ${report.scanned} memories, all healthy.`;
   }
-  const lines = [`Recall scan: ${report.scanned} memories`];
+  const lines = [`Nous scan: ${report.scanned} memories`];
   if (report.toArchived.length)
     lines.push(`  archived ${report.toArchived.length}: ${report.toArchived.join(", ")}`);
   if (report.toStale.length)

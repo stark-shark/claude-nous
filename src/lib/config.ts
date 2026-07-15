@@ -18,7 +18,7 @@ export interface RecallConfig {
   };
   // Hermes-style hard caps on the notation body, in characters. 0 = unlimited.
   // A save over the cap returns a consolidate-or-remove error instead of writing.
-  // Because the body is already Recall notation, a cap holds far more knowledge
+  // Because the body is already Nous notation, a cap holds far more knowledge
   // than the same cap of raw prose.
   caps: {
     fb: number;
@@ -41,7 +41,7 @@ export interface RecallConfig {
     archiveAfterStaleDays: number; // extra days past stale before archiving
   };
   // Active mid-session review (Hermes' "nudge"): every N user turns, prompt the
-  // agent to delegate a memory review to recall-worker (Haiku).
+  // agent to delegate a memory review to nous-worker (Haiku).
   review: {
     enabled: boolean;
     everyNTurns: number;
@@ -126,7 +126,7 @@ export function loadConfig(configPath: string): RecallConfig {
     userConfig = JSON.parse(stripped);
   } catch (err) {
     console.error(
-      `[recall] Failed to parse config at ${configPath}: ${(err as Error).message}. Using defaults.`
+      `[nous] Failed to parse config at ${configPath}: ${(err as Error).message}. Using defaults.`
     );
     return { ...DEFAULT_CONFIG };
   }

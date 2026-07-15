@@ -1,7 +1,7 @@
 {
-  "name": "recall-mcp",
+  "name": "nous-mcp",
   "version": "0.8.0",
-  "description": "Recall — MCP server for compressed memory notation in Claude Code",
+  "description": "Nous — MCP server for compressed memory notation in Claude Code",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -17,7 +17,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/stark-shark/claude-recall.git"
+    "url": "https://github.com/stark-shark/claude-nous.git"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0"

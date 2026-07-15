@@ -1,7 +1,7 @@
 // Prompt-injection / exfiltration scanning for memory content.
 //
-// Recall memories are injected into the system prompt (via MEMORY.md, the
-// always-loaded user.md, and recall_load returns), so every memory is an
+// Nous memories are injected into the system prompt (via MEMORY.md, the
+// always-loaded user.md, and nous_load returns), so every memory is an
 // injection surface — and the auto-scan will eventually write memory derived
 // from transcript/tool content, which is the real attack vector.
 //
@@ -129,5 +129,5 @@ export function stripInvisible(text: string): string {
  * fenced memory cannot impersonate the agent's own system/tool framing.
  */
 export function fence(label: string, body: string): string {
-  return `<<RECALL ${label}>>\n${body}\n<<END RECALL>>`;
+  return `<<NOUS ${label}>>\n${body}\n<<END NOUS>>`;
 }

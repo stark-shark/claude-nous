@@ -115,7 +115,7 @@ export function handleSave(
 
     if (config.notationEnforcement === "strict" && !validation.valid) {
       return {
-        text: `Notation validation failed:\n${validation.errors.join("\n")}\n\nCompress using the Recall symbol grammar before saving.`,
+        text: `Notation validation failed:\n${validation.errors.join("\n")}\n\nCompress using the Nous symbol grammar before saving.`,
         isError: true,
         warnings: [],
         filename,
@@ -225,7 +225,7 @@ export function handleSave(
     );
     if (archived > 0) {
       warnings.push(
-        `${config.indexFile} reached indexMaxLines (${config.indexMaxLines} entries); moved ${archived} oldest entr${archived === 1 ? "y" : "ies"} to ${ARCHIVE_FILENAME}. Memory files themselves are untouched — restore an entry by moving its line back, or raise indexMaxLines in recall.config.jsonc.`
+        `${config.indexFile} reached indexMaxLines (${config.indexMaxLines} entries); moved ${archived} oldest entr${archived === 1 ? "y" : "ies"} to ${ARCHIVE_FILENAME}. Memory files themselves are untouched — restore an entry by moving its line back, or raise indexMaxLines in nous.config.jsonc.`
       );
     }
   }
@@ -245,7 +245,7 @@ export function handleSave(
       }
     } catch (err) {
       warnings.push(
-        `Bidirectional link update failed: ${(err as Error).message}. The memory was saved, but some target links may not point back. Run recall_check --links to verify.`
+        `Bidirectional link update failed: ${(err as Error).message}. The memory was saved, but some target links may not point back. Run nous_check --links to verify.`
       );
     }
   }

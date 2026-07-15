@@ -16,7 +16,7 @@ export function ensureBidirectionalLinks(
   for (const target of targetLinks) {
     // Cross-project links (hash::slug) are not auto-maintained from a single-project save
     // to avoid silently writing into other projects. Callers should surface these so users
-    // can add the reverse link manually (or run recall_check --links to find gaps).
+    // can add the reverse link manually (or run nous_check --links to find gaps).
     if (target.includes("::")) {
       crossProject.push(target);
       continue;

@@ -46,6 +46,6 @@ describe("threat scanner", () => {
   });
 
   it("fence wraps content", () => {
-    expect(fence("USER", "hi")).toBe("<<RECALL USER>>\nhi\n<<END RECALL>>");
+    expect(fence("USER", "hi")).toBe("<<NOUS USER>>\nhi\n<<END NOUS>>");
   });
 });

@@ -62,7 +62,7 @@ export function ensureMemoryDir(
 // Global memory dir — holds the user-scoped profile (user.md) and anything else
 // that should be shared across every project rather than scoped to one.
 export function getGlobalMemoryDir(): string {
-  return path.join(os.homedir(), ".claude", "recall", "memory");
+  return path.join(os.homedir(), ".claude", "nous", "memory");
 }
 
 export function ensureGlobalMemoryDir(): string {

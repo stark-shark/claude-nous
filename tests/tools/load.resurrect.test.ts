@@ -19,7 +19,7 @@ describe("resurrection-on-access", () => {
   afterEach(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
 
   function setState(file: string, state: string) {
-    const c = fs.readFileSync(file, "utf-8").replace("  recall:", `  recall:\n    state: ${state}`);
+    const c = fs.readFileSync(file, "utf-8").replace("  nous:", `  nous:\n    state: ${state}`);
     fs.writeFileSync(file, c);
   }
 

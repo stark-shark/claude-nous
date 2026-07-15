@@ -6,9 +6,9 @@ import * as os from "node:os";
 
 // Injected at build time by scripts/build.mjs from package.json. Fallback to
 // "0.0.0-dev" when running unbundled source (e.g. tests, `tsc --watch`).
-declare const __RECALL_VERSION__: string;
+declare const __NOUS_VERSION__: string;
 const VERSION: string =
-  typeof __RECALL_VERSION__ === "string" ? __RECALL_VERSION__ : "0.0.0-dev";
+  typeof __NOUS_VERSION__ === "string" ? __NOUS_VERSION__ : "0.0.0-dev";
 
 import { loadConfig } from "./lib/config.js";
 import {
@@ -28,9 +28,14 @@ import { handleExport } from "./tools/export.js";
 import { handleImport } from "./tools/import.js";
 import { searchSessions } from "./lib/sessions.js";
 import { runScan, formatReport } from "./lib/curate.js";
+import { migrateFromRecall } from "./lib/migrate.js";
 
-const SERVER_DIR = path.join(os.homedir(), ".claude", "recall");
-const CONFIG_PATH = path.join(SERVER_DIR, "recall.config.jsonc");
+// Non-destructive one-time copy of pre-v1 ~/.claude/recall data. Runs before
+// any dir resolution so config/global-memory land in place first.
+migrateFromRecall();
+
+const SERVER_DIR = path.join(os.homedir(), ".claude", "nous");
+const CONFIG_PATH = path.join(SERVER_DIR, "nous.config.jsonc");
 const config = loadConfig(CONFIG_PATH);
 
 // The user profile is scoped to the USER, not a project: store + load it from a
@@ -49,22 +54,22 @@ function readDirs(): MemoryDirEntry[] {
 }
 
 const server = new McpServer(
-  { name: "recall", version: VERSION },
+  { name: "nous", version: VERSION },
   {
     capabilities: { logging: {} },
     instructions: [
-      "Recall — compressed memory notation system for Claude Code auto-memory.",
+      "Nous — compressed memory notation system for Claude Code auto-memory.",
       "",
-      "TOOLS: recall_save (write with notation enforcement), recall_load (read with access tracking),",
-      "recall_search (cross-project query), recall_check (health checks), recall_decode (expand to plain English),",
-      "recall_registry (entity shortcode CRUD), recall_export/recall_import (backup/restore).",
+      "TOOLS: nous_save (write with notation enforcement), nous_load (read with access tracking),",
+      "nous_search (cross-project query), nous_check (health checks), nous_decode (expand to plain English),",
+      "nous_registry (entity shortcode CRUD), nous_export/nous_import (backup/restore).",
       "",
-      "TASK DISPLAY (MANDATORY): EVERY recall_* tool call MUST be wrapped in TaskCreate/TaskUpdate.",
+      "TASK DISPLAY (MANDATORY): EVERY nous_* tool call MUST be wrapped in TaskCreate/TaskUpdate.",
       "Set activeForm on the FIRST task to brand the operation:",
       "  Loading/searching: 'Recalling memories…'",
       "  Saving: 'Storing memories…'",
       "  Health checks: 'Checking memory health…'",
-      "Task subjects are short descriptions WITHOUT a 'Recall —' prefix.",
+      "Task subjects are short descriptions WITHOUT a 'Nous —' prefix.",
       "",
       "MULTI-TOPIC RETRIEVAL: Identify ALL topics in the user's request. Create ALL tasks upfront.",
       "Example: TaskCreate({subject:'Loading GP Integration', activeForm:'Recalling memories…'}),",
@@ -77,21 +82,21 @@ function getProjectsRoot(): string {
   return path.join(os.homedir(), ".claude", "projects");
 }
 
-// ─── recall_save ───────────────────────────────────────────────
+// ─── nous_save ───────────────────────────────────────────────
 
 server.registerTool(
-  "recall_save",
+  "nous_save",
   {
     title: "Save Memory",
     description:
-      "Write or update a memory file with Recall notation enforcement, dedup check, and index update. " +
+      "Write or update a memory file with Nous notation enforcement, dedup check, and index update. " +
       "Enforces a hard character cap on the body: a save over cap returns a 'Cap exceeded' error and writes nothing — consolidate or split, then retry THIS turn. " +
       "A usr-type memory named 'user' or 'profile' is routed to the always-loaded user.md profile. Content is security-scanned before write.",
     inputSchema: z.object({
       name: z.string().describe("Memory name (e.g. 'FK CASCADE')"),
       type: z.enum(["fb", "proj", "ref", "usr"]).describe("Memory type"),
       description: z.string().describe("One-line description for relevance matching"),
-      content: z.string().describe("Memory content in Recall notation"),
+      content: z.string().describe("Memory content in Nous notation"),
       links: z.array(z.string()).optional().describe("Linked memory filenames (without .md)"),
     }),
   },
@@ -107,10 +112,10 @@ server.registerTool(
   }
 );
 
-// ─── recall_load ───────────────────────────────────────────────
+// ─── nous_load ───────────────────────────────────────────────
 
 server.registerTool(
-  "recall_load",
+  "nous_load",
   {
     title: "Load Memory",
     description:
@@ -118,7 +123,7 @@ server.registerTool(
     inputSchema: z.object({
       name: z.string().optional().describe("Memory name to search for"),
       file: z.string().optional().describe("Exact filename (e.g. feedback_fk_cascade.md)"),
-      expanded: z.boolean().optional().describe("Return decoded plain English instead of raw Recall notation"),
+      expanded: z.boolean().optional().describe("Return decoded plain English instead of raw Nous notation"),
     }),
   },
   async ({ name, file, expanded }) => {
@@ -132,10 +137,10 @@ server.registerTool(
   }
 );
 
-// ─── recall_search ─────────────────────────────────────────────
+// ─── nous_search ─────────────────────────────────────────────
 
 server.registerTool(
-  "recall_search",
+  "nous_search",
   {
     title: "Search Memories",
     description:
@@ -163,10 +168,10 @@ server.registerTool(
   }
 );
 
-// ─── recall_check ──────────────────────────────────────────────
+// ─── nous_check ──────────────────────────────────────────────
 
 server.registerTool(
-  "recall_check",
+  "nous_check",
   {
     title: "Health Check",
     description:
@@ -187,13 +192,13 @@ server.registerTool(
   }
 );
 
-// ─── recall_decode ─────────────────────────────────────────────
+// ─── nous_decode ─────────────────────────────────────────────
 
 server.registerTool(
-  "recall_decode",
+  "nous_decode",
   {
     title: "Decode Memory",
-    description: "Decode a memory from Recall notation to plain English.",
+    description: "Decode a memory from Nous notation to plain English.",
     inputSchema: z.object({
       name: z.string().optional().describe("Memory name to decode"),
       file: z.string().optional().describe("Exact filename"),
@@ -211,10 +216,10 @@ server.registerTool(
   }
 );
 
-// ─── recall_registry ───────────────────────────────────────────
+// ─── nous_registry ───────────────────────────────────────────
 
 server.registerTool(
-  "recall_registry",
+  "nous_registry",
   {
     title: "Manage Registry",
     description: "View, add, update, or remove entity shortcodes in REGISTRY.md.",
@@ -236,10 +241,10 @@ server.registerTool(
   }
 );
 
-// ─── recall_export ─────────────────────────────────────────────
+// ─── nous_export ─────────────────────────────────────────────
 
 server.registerTool(
-  "recall_export",
+  "nous_export",
   {
     title: "Export Memories",
     description: "Export memories to a JSON backup file.",
@@ -259,10 +264,10 @@ server.registerTool(
   }
 );
 
-// ─── recall_import ─────────────────────────────────────────────
+// ─── nous_import ─────────────────────────────────────────────
 
 server.registerTool(
-  "recall_import",
+  "nous_import",
   {
     title: "Import Memories",
     description: "Import memories from a JSON backup file.",
@@ -289,7 +294,7 @@ server.registerTool(
 // the MCP server.
 function runScanCli(): void {
   if (!config.scan.enabled) {
-    process.stdout.write("Recall scan: disabled in config.\n");
+    process.stdout.write("Nous scan: disabled in config.\n");
     return;
   }
   // Scope auto-apply to the CURRENT project only — never silently mutate other
@@ -301,13 +306,18 @@ function runScanCli(): void {
 }
 
 async function main() {
+  // `--migrate` just triggers the module-load migration (already run above) and
+  // exits — a fast path for hooks/tests to force the recall->nous copy.
+  if (process.argv.includes("--migrate")) {
+    return;
+  }
   if (process.argv.includes("--scan")) {
     runScanCli();
     return;
   }
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Recall MCP server running on stdio");
+  console.error("Nous MCP server running on stdio");
 }
 
 main().catch((error) => {
