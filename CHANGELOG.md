@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0
+
+Size-triggered self-maintenance + fixes from live v1 testing.
+
+- **`nous_maintain` + auto-condense** — the background review now detects over/near-cap memories, condenses them via headless Haiku, and stages approval-gated `nous_maintain apply` proposals (never silent rewrites). New `nous_maintain` tool (`scan`/`list`/`apply`), `src/lib/maintain.ts`, and `--over-cap` CLI.
+- **fix(summarize):** `writeSummary` validates the session id — an unknown/truncated id now writes nothing (no stray daily digest) instead of reporting a false success.
+- **fix(daily):** digest idempotence keys on the full session id, not the 8-char short id (prefix-collision safe).
+- **fix(skill):** `nous_skill` create/apply ensure the skills root exists before path-hardening — previously refused with ENOENT on a machine that had never created a personal skill.
+
 ## 1.0.0
 
 **Rename Recall → Nous** and a full total-recall revamp (Hermes-audited against the real NousResearch/hermes-agent engine).
