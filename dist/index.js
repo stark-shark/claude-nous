@@ -26750,7 +26750,7 @@ ${m.body}`;
 }
 
 // src/index.ts
-var VERSION = typeof __NOUS_VERSION__ === "string" ? __NOUS_VERSION__ : "0.0.0-dev";
+var VERSION = true ? "1.1.0" : "0.0.0-dev";
 var _emitWarning = process.emitWarning.bind(process);
 process.emitWarning = ((warning, ...rest) => {
   const msg = typeof warning === "string" ? warning : warning?.message ?? "";

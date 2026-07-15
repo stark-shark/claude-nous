@@ -25,7 +25,7 @@ execSync(
     "--format=esm",
     "--outfile=dist/index.js",
     `--banner:js=${JSON.stringify(banner)}`,
-    `--define:__RECALL_VERSION__=${JSON.stringify(JSON.stringify(version))}`,
+    `--define:__NOUS_VERSION__=${JSON.stringify(JSON.stringify(version))}`,
   ].join(" "),
   { cwd: ROOT, stdio: "inherit", shell: true },
 );
