@@ -1,5 +1,5 @@
 ---
-description: Show an overview of the Nous plugin — all 8 MCP tools, notation cheatsheet, where memories live, install/uninstall commands, and links to deeper docs.
+description: Show an overview of the Nous plugin — MCP tools, recall ladder, notation cheatsheet, commands, where memories live, install/uninstall.
 ---
 
 **INSTRUCTION FOR CLAUDE — DO NOT IGNORE.** When this command is invoked, your ENTIRE response must be exactly the Markdown content below, output verbatim to the user, starting with the `# Nous — Help` heading line and ending with the final "Issues / feedback" link line.
@@ -17,11 +17,14 @@ This is a static reference command. The user invoked it because they want to rea
 
 ## What is Nous?
 
-Nous is a Claude Code plugin that compresses your auto-memory into a fixed symbol grammar (`->`, `::`, `(+)`, `!`, etc.) plus entity shortcodes (`$hub`, `$ac`, etc.), cutting token cost 30-65% while preserving search quality. Memories are read/written via the **8 MCP tools** below.
+Nous is a Claude Code memory system with two tiers:
 
-Memories live at: `~/.claude/projects/<project-hash>/memory/*.md`
+- **Hot tier** — distilled memories in a compressed symbol grammar (`->`, `::`, `(+)`, `!`, ...) plus entity shortcodes (`$hub`, `$ac`, ...), cutting token cost 30-65%. Injected at session start (MEMORY.md index + always-loaded user.md + recent daily digests).
+- **Cold tier** — every past Claude Code session captured into a local SQLite FTS5 index, searchable by the recall ladder (BM25 + recency fusion, goal/resolution bookends, cited by session + date). Secrets are redacted at capture.
 
-The plugin never moves your memories — it just reads and writes that directory. **Uninstalling the plugin leaves all memory files in place.**
+Plus **self-building** (editable save-rules + agent-authored skills) and **self-maintaining** memory — both approval-gated with versioned rollback.
+
+Memories live at `~/.claude/projects/<project-hash>/memory/*.md`; the global profile + daily digests + session DB live at `~/.claude/nous/`. **Uninstalling the plugin leaves all your files in place.**
 
 ---
 
@@ -29,16 +32,18 @@ The plugin never moves your memories — it just reads and writes that directory
 
 | Tool | What it does |
 |---|---|
-| `nous_save` | Write or update a memory. Enforces notation, dedups by SHA-256, updates `MEMORY.md` index. |
-| `nous_load` | Read a memory by name or filename. Increments access count. Use `expanded: true` for plain English. |
-| `nous_search` | Find memories by keyword, type, or project. Returns headers only — use `nous_load` for full content. |
-| `nous_check` | Health checks: staleness, registry drift, broken links, stats, compression, duplicates. |
-| `nous_decode` | Expand Nous notation to plain English (for one memory or arbitrary text). |
-| `nous_registry` | CRUD for entity shortcodes (`$hub`, `$ac`, etc.) in `REGISTRY.md`. |
-| `nous_export` | Export all memories to a JSON backup. |
-| `nous_import` | Restore memories from a JSON backup. |
+| `nous_save` | Write/update a memory (or a `batch` for consolidation). Enforces notation + caps, dedups, updates `MEMORY.md`. |
+| `nous_load` | Read a memory by name or filename. Increments access count. `expanded:true` for plain English. |
+| `nous_search` | Hot tier (memory headers) OR cold tier (`scope:"sessions"` — FTS5 recall ladder w/ bookends + scroll/read). |
+| `nous_check` | Health checks: staleness, caps, lifecycle, links, duplicates, and `sessions` cold-tier DB stats. |
+| `nous_decode` | Expand Nous notation to plain English. |
+| `nous_registry` | CRUD for entity shortcodes (`$hub`, `$ac`, ...) in `REGISTRY.md`. |
+| `nous_rules` | View/propose/apply/rollback the editable save-rules (RULES.md). |
+| `nous_skill` | Author/evolve the agent's own procedural skills (approval-gated, versioned). |
+| `nous_forget` | Right-to-forget: purge a session/query from the cold tier + tombstone. |
+| `nous_export` / `nous_import` | Back up / restore memories (JSON). |
 
-All tool calls should be wrapped in `TaskCreate` / `TaskUpdate` for clean progress display. The Nous skill (auto-injected at session start) covers the conventions.
+All tool calls are wrapped in `TaskCreate` / `TaskUpdate` for clean progress display. The Nous skill (auto-injected at session start) covers the conventions.
 
 ---
 
@@ -69,7 +74,23 @@ You don't need to do anything to enable this — Claude picks the right path bas
 
 Entity shortcodes (`$hub`, `$ac`, `$sb`, ...) are defined in `REGISTRY.md` in your memory dir.
 
-A copy of this cheatsheet is also written to `~/.claude/projects/<project-hash>/memory/RECALL_NOTATION.md` so you can decode memories even if the plugin is uninstalled.
+A copy of this cheatsheet is also written to `~/.claude/projects/<project-hash>/memory/NOUS_NOTATION.md` so you can decode memories even if the plugin is uninstalled.
+
+---
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `/nous-find <query>` | Recall-ladder search over past sessions, cited by session + date. |
+| `/nous-remember <text>` | Force-save a durable memory now. |
+| `/nous-forget <query>` | Purge a session/query from the cold tier (preview → confirm). |
+| `/nous-status` | Memory + cold-tier health report. |
+| `/nous-rules` | View/edit the save-rules that govern what gets remembered. |
+| `/nous-skill` | Author/evolve the agent's own procedural skills. |
+| `/nous-import` | Day-one backfill: index + summarize existing Claude Code history. |
+| `/nous-export` | Back up memories to JSON. |
+| `/nous-help` | This overview. |
 
 ---
 
@@ -82,7 +103,7 @@ description: "one-line summary"
 metadata:
   node_type: memory
   type: fb                         # fb (feedback), proj (project), ref (reference), usr (user)
-  recall:
+  nous:
     humanName: "Human Readable"    # optional, when display name differs from slug
     created: 2026-05-29
     updated: 2026-05-29
@@ -95,7 +116,7 @@ metadata:
 <body in Nous notation>
 ```
 
-Nous stores its metadata under `metadata.recall.*` so Claude Code's native auto-memory system and Nous co-exist on the same files without overwriting each other. Older files using the legacy `T:`/`D:` format still parse — new saves upgrade them automatically.
+Nous stores its metadata under `metadata.nous.*` so Claude Code's native auto-memory and Nous co-exist on the same files. Legacy `metadata.recall.*` and the older `T:`/`D:` format still parse — new saves upgrade them automatically.
 
 ---
 
@@ -104,21 +125,20 @@ Nous stores its metadata under `metadata.recall.*` so Claude Code's native auto-
 Install (one time):
 ```
 /plugin marketplace add stark-shark/claude-nous
-/plugin install recall@recall
+/plugin install nous@nous
 /reload-plugins
 ```
 
-Uninstall (memories are NOT touched):
+Upgrading from the old Recall plugin? Remove it first (your data auto-migrates from `~/.claude/recall` to `~/.claude/nous` on first run):
 ```
 /plugin uninstall recall@recall
 /plugin marketplace remove recall
 ```
 
-Upgrade:
+Uninstall (files are NOT touched):
 ```
-/plugin marketplace update recall
-/plugin install recall@recall
-/reload-plugins
+/plugin uninstall nous@nous
+/plugin marketplace remove nous
 ```
 
 ---

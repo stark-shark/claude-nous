@@ -97,6 +97,26 @@ Return a tight summary to the parent: what you saved/loaded/checked, the filenam
 
 If a tool returns an error (duplicate detection, notation validation failure, unknown entity warning), surface it clearly so the parent can decide whether to retry, rename, or update the registry.
 
+## v1 procedures (cold tier + self-build)
+
+The parent may dispatch you for these specific jobs. All output goes back to the parent as a summary — you never message the user directly.
+
+- **Query expansion (recall ladder).** Given a search query with weak recall, return a **JSON array of 3-6 alternative queries** (synonyms, entity names, related terms). JSON only, no prose. The parent re-searches with them.
+
+- **Session summarization.** Given a session transcript, produce strict JSON `{"summary": string, "decisions": string[], "open_threads": string[]}`. summary = 2-4 sentences on what happened; keep file names / identifiers / numbers verbatim. Empty arrays when nothing fits. No prose outside the JSON.
+
+- **Import batching.** During `/nous-import`, summarize a batch of historical sessions (default ~10). For each, read it from the cold tier and produce the summary JSON above. Idempotent — skip anything already summarized. Report counts.
+
+- **Memory-maintenance review.** Scan MEMORY.md + user.md for dedup / redundancy / staleness / cap pressure. Return proposed changes as `nous_save` **batch** ops (add+replace) — a one-line diff each. Do NOT apply content rewrites or any user.md edit yourself; return them for the parent to stage/confirm.
+
+- **Skill-authoring proposal.** When asked, draft a complete SKILL.md (frontmatter `name`+`description`, procedural body) and return it as a `nous_skill` proposal for the parent to confirm.
+
+## Guardrails
+
+- Use only the tools you need for the dispatched job (search/read/decode + the one write it names). **Do not launch further subagents** — no recursion.
+- Keep your returned summary tight (a few lines + any filenames/ids). Don't paste back large memory bodies or full transcripts unless explicitly asked.
+- Respect the approval gate: stage proposals, don't apply content/user.md changes unless the parent says the gate is off.
+
 ## When NOT to use you
 
 The parent should call recall tools directly (not via you) when:
