@@ -26,7 +26,7 @@ export interface SessionSearchInput {
   limit?: number;
 }
 
-function extractText(message: unknown): string {
+export function extractText(message: unknown): string {
   if (!message || typeof message !== "object") return "";
   const content = (message as { content?: unknown }).content;
   if (typeof content === "string") return content;
