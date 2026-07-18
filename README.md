@@ -30,8 +30,12 @@ Nous borrows the mechanisms that make Nous Research's Hermes memory feel like it
 - **Cold tier (SQLite FTS5)** — every session is captured into `~/.claude/nous/nous.db`; `nous_search scope:"sessions"` runs the recall ladder (BM25 + recency fusion, bookends, citations). Uses the built-in `node:sqlite` (Node ≥22.5); falls back to a dependency-free brute scan otherwise. Secrets are redacted before indexing.
 - **Auto-curation scan** — on session start, low-risk lifecycle transitions (`active → stale → archived`) are applied automatically **to the current project only**; over-cap/duplicate memories are escalated in a scan report. Archived memories leave MEMORY.md but stay searchable. `nous_check` gained `lifecycle` and `caps` reports.
 - **Resurrection-on-access** — loading a stale/archived memory revives it to `active` and re-adds it to MEMORY.md, so memories you actually use never stay buried.
-- **Active review nudge** — every N user turns a `UserPromptSubmit` hook prompts the agent to delegate a memory review to the Haiku `nous-worker`, approval-gated by default (proposes a diff; you confirm before any write).
-- **Injection defense** — content is scanned on write (invisible/control unicode hard-rejected) and delimiter-fenced on load, since memories are injected into the system prompt.
+- **Background review** — every N user turns, a detached Haiku pass reviews the recent transcript and stages memory proposals to a pending queue (surfaced at the next session start), approval-gated by default. A legacy in-context nudge mode is still available (`review.mode:"nudge"`).
+- **Pre-turn recall (push)** — on every prompt, an LLM-free FTS+RRF pass over past sessions injects up to 3 one-line reminders ("[date] project — summary (session id)"). Recall stops depending on the model deciding to search. Zero tokens, milliseconds (`preturn.*`).
+- **Semantic keywords** — the session summarizer also emits 5-10 topic/synonym keywords, indexed into FTS as a hidden row — so paraphrase queries hit sessions whose transcripts never used those words.
+- **Anti-thrash + atomic batch** — repeated over-cap retries on the same memory return terminal guidance instead of looping; `nous_save batch` is all-or-nothing (every spec validated before anything is written).
+- **Injection defense** — content is scanned on write (invisible/control unicode hard-rejected) and delimiter-fenced on load, since memories are injected into the system prompt. All memory/state writes are atomic (temp + rename), and out-of-format overwrites are backed up first.
+- **Retention** — interval-gated `VACUUM` keeps `nous.db` compact; optional pruning (`retention.pruneSessions`, off by default) reduces old summarized sessions to one searchable summary row.
 
 All of it is config-driven — see `nous.config.reference.md`. Set `caps.*` to `0`, or `scan.enabled` / `review.enabled` / `security.scanOnWrite` to `false`, to opt out of any piece.
 
@@ -142,7 +146,7 @@ Key settings:
 
 ## Memory Format (v0.5.0+)
 
-Memories are markdown files with a YAML frontmatter header in Claude Code's native auto-memory format. Nous data lives under `metadata.recall.*`:
+Memories are markdown files with a YAML frontmatter header in Claude Code's native auto-memory format. Nous data lives under `metadata.nous.*`:
 
 ```yaml
 ---
@@ -151,7 +155,7 @@ description: "one-line summary"
 metadata:
   node_type: memory
   type: fb                          # fb, proj, ref, usr
-  recall:
+  nous:
     humanName: "Human Readable"     # optional — used when display name differs from slug
     created: 2026-05-29
     updated: 2026-05-29
@@ -159,14 +163,15 @@ metadata:
     links:
       - linked_a
       - linked_b
+    state: stale                    # lifecycle (active|stale|archived); absent = active
 ---
 
 <body content using Nous notation>
 ```
 
-This format lets Claude Code's native auto-memory system and Nous co-exist on the same files. Claude Code touches `name`, `description`, and `metadata.type`; Nous owns `metadata.recall.*`. Neither overwrites the other.
+This format lets Claude Code's native auto-memory system and Nous co-exist on the same files. Claude Code touches `name`, `description`, and `metadata.type`; Nous owns `metadata.nous.*`. Neither overwrites the other.
 
-**Legacy format compatibility:** older files using a `T:<type> | <name>` / `D:` / `C:` / `U:` / `A:` / `L:` header still parse. New saves rewrite them to the format above — no manual migration required.
+**Legacy format compatibility:** older files using the pre-v1 `metadata.recall.*` sub-block or a `T:<type> | <name>` / `D:` / `C:` / `U:` / `A:` / `L:` header still parse. New saves rewrite them to the format above — no manual migration required.
 
 ## Nous Notation
 
@@ -189,7 +194,7 @@ This format lets Claude Code's native auto-memory system and Nous co-exist on th
 
 Entity shortcodes like `$hub`, `$ac`, `$sb` are defined in `REGISTRY.md` and expanded at decode time.
 
-Full spec: [`docs/specs/2026-04-08-recall-language-design.md`](docs/specs/2026-04-08-recall-language-design.md)
+Full spec: [`docs/specs/2026-04-08-nous-language-design.md`](docs/specs/2026-04-08-nous-language-design.md)
 
 ## Memory Location
 

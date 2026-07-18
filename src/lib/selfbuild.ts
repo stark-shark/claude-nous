@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { createHash } from "node:crypto";
+import { writeFileAtomic } from "./atomic.js";
 
 // Shared safety primitives for Nous' self-building surfaces (RULES.md and
 // agent-authored skills) and self-maintaining memory. Every mutation is:
@@ -125,7 +126,7 @@ function readPending(): Proposal[] {
 
 function writePending(list: Proposal[]): void {
   fs.mkdirSync(stateDir(), { recursive: true });
-  fs.writeFileSync(pendingPath(), JSON.stringify(list, null, 2), "utf8");
+  writeFileAtomic(pendingPath(), JSON.stringify(list, null, 2));
 }
 
 export function addProposal(p: Omit<Proposal, "id" | "created">): Proposal {
@@ -203,7 +204,7 @@ export function applyProposal(
   try {
     fs.mkdirSync(path.dirname(target), { recursive: true });
     backup = backupFile(target, opts.backupDir, opts.maxBackups);
-    fs.writeFileSync(target, p.payload, "utf8");
+    writeFileAtomic(target, p.payload);
   } catch (e) {
     return { ok: false, message: `Write failed: ${(e as Error).message}` };
   }

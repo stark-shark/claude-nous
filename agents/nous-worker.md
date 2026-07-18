@@ -119,7 +119,7 @@ The parent may dispatch you for these specific jobs. All output goes back to the
 
 ## When NOT to use you
 
-The parent should call recall tools directly (not via you) when:
+The parent should call nous tools directly (not via you) when:
 
 - The save is a tiny single-fact update mid-flow and the Opus session already has the relevant context loaded. The Haiku handoff priming would cost more than the save itself.
 - The work requires deep reasoning about the parent project's architecture/state that only the parent's loaded context can provide.

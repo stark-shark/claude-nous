@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { RecallConfig } from "../lib/config.js";
+import type { NousConfig } from "../lib/config.js";
 import type { MemoryDirEntry } from "../lib/memory-dir.js";
 import { parseHeader, stripHeader, type MemoryState } from "../lib/parser.js";
 import { loadRegistry, findUnknownEntities } from "../lib/registry.js";
@@ -120,7 +120,7 @@ function checkStats(memories: MemoryInfo[]): string {
   return lines.join("\n");
 }
 
-function checkStale(memories: MemoryInfo[], config: RecallConfig): string {
+function checkStale(memories: MemoryInfo[], config: NousConfig): string {
   const now = Date.now();
   const staleMs = config.healthChecks.staleDays * 24 * 60 * 60 * 1000;
   const stale: string[] = [];
@@ -236,7 +236,7 @@ function checkDuplicates(memories: MemoryInfo[]): string {
 function checkCompression(
   memories: MemoryInfo[],
   memoryDirs: MemoryDirEntry[],
-  config: RecallConfig
+  config: NousConfig
 ): string {
   // Build per-project registry cache so decodeMemory uses the right expansions.
   const registries = new Map<string, ReturnType<typeof loadRegistry>>();
@@ -296,7 +296,7 @@ function checkLifecycle(memories: MemoryInfo[]): string {
   return lines.join("\n");
 }
 
-function checkCaps(memories: MemoryInfo[], config: RecallConfig): string {
+function checkCaps(memories: MemoryInfo[], config: NousConfig): string {
   const over: string[] = [];
   const near: string[] = [];
   for (const m of memories) {
@@ -319,7 +319,7 @@ function checkCaps(memories: MemoryInfo[], config: RecallConfig): string {
 export function handleCheck(
   input: CheckInput,
   memoryDirs: MemoryDirEntry[],
-  config: RecallConfig
+  config: NousConfig
 ): CheckResult {
   const checks = input.checks.includes("all")
     ? ["stats", "lifecycle", "caps", "stale", "registry", "links", "compression", "duplicates"] as CheckType[]

@@ -50,21 +50,19 @@
 
   // Mid-session review. mode "background" (default) = a detached Haiku pass every
   // everyNTurns turns stages proposals to the pending queue (surfaced next start);
-  // "nudge" = legacy in-context prompt; "off" = disabled. rulesInterval paces the
-  // self-build (RULES/skills) review separately.
+  // "nudge" = legacy in-context prompt; "off" = disabled.
   "review": {
     "enabled": true,
     "mode": "background",
     "everyNTurns": 10,
-    "rulesInterval": 10,
     "approvalGate": true   // true = proposals staged, user confirms before any write
   },
 
-  // The canonical Hermes-style USER.md — always injected at session start, capped.
+  // The canonical Hermes-style USER.md — injected at session start, capped.
   // A usr-type memory named "user" or "profile" writes here.
   "userMemory": {
     "filename": "user.md",
-    "alwaysLoad": true
+    "alwaysLoad": true     // false = don't inject the profile at session start
   },
 
   // Cold-tier capture: index every session into SQLite (LLM-free) and summarize
@@ -78,6 +76,15 @@
     "perTurnCap": 3000,          // a single longer turn is head+tail truncated first
     "redact": true,              // strip secrets/PII before FTS + injection
     "redactExtra": []            // extra user regex patterns to redact
+  },
+
+  // Pre-turn recall injection: on every user prompt, an LLM-free FTS+RRF pass
+  // over past sessions injects up to maxSessions one-line reminders as context
+  // ("possibly relevant: [date] ... (session <id>)"). Zero tokens, milliseconds.
+  "preturn": {
+    "enabled": true,
+    "maxSessions": 3,
+    "minPromptChars": 12   // skip trivial prompts ("yes", "continue")
   },
 
   // Recall ladder tuning.
@@ -98,10 +105,9 @@
   // Agent-authored procedural skills (written to dir, auto-discovered).
   "skills": { "enabled": true, "approvalGate": true, "dir": "~/.claude/skills", "maxBackups": 20 },
 
-  // Self-maintaining MEMORY.md / user.md.
-  "maintain": { "autoLowRisk": true, "gateContentEdits": true, "gateUserEdits": true },
-
-  // DB maintenance. Session-prune OFF by default (total-recall goal).
+  // DB maintenance. Session-prune OFF by default (total-recall goal). When on,
+  // pruning replaces raw messages of old, already-summarized sessions with one
+  // searchable summary row; unsummarized sessions are never pruned.
   "retention": {
     "vacuum": true,
     "vacuumMinIntervalHours": 24,

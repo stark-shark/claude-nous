@@ -1,7 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { writeFileAtomic } from "./atomic.js";
 
-export const DECODER_FILENAME = "RECALL_NOTATION.md";
+export const DECODER_FILENAME = "NOUS_NOTATION.md";
+// Pre-rename cheatsheet name (plugin was Recall through v1.0) — migrated on save.
+const LEGACY_DECODER_FILENAME = "RECALL_NOTATION.md";
 
 const DECODER_CONTENT = `# Nous Notation Cheatsheet
 
@@ -34,7 +37,7 @@ in this same directory. Look there to see what each one expands to.
 
 ## Memory File Header (v0.5.0+)
 
-Every memory begins with a YAML frontmatter block in Claude Code's native auto-memory format, with Nous-specific data nested under \`metadata.recall\`:
+Every memory begins with a YAML frontmatter block in Claude Code's native auto-memory format, with Nous-specific data nested under \`metadata.nous\`:
 
 \`\`\`yaml
 ---
@@ -43,7 +46,7 @@ description: "one-line summary"
 metadata:
   node_type: memory
   type: fb                        # fb (feedback), proj (project), ref (reference), usr (user)
-  recall:
+  nous:
     humanName: "Human Readable Name"   # optional — only when it differs from the slug
     created: 2026-05-29                # YYYY-MM-DD (set once)
     updated: 2026-05-29                # YYYY-MM-DD (updated on save)
@@ -51,12 +54,13 @@ metadata:
     links:
       - linked_memory_a                # filenames without .md
       - linked_memory_b
+    state: stale                       # lifecycle (active|stale|archived); absent = active
 ---
 
 <body in Nous notation>
 \`\`\`
 
-**Older files** (pre-v0.5.0) may use a legacy header with \`T:<type> | <name>\`, \`D:\`, \`C:\`, \`U:\`, \`A:\`, \`L:\` lines between two \`---\` markers. Nous reads both formats. New saves always use the newer format above.
+**Older files** may nest the same data under \`metadata.recall\` (the plugin's pre-v1 name) or use a legacy header with \`T:<type> | <name>\`, \`D:\`, \`C:\`, \`U:\`, \`A:\`, \`L:\` lines between two \`---\` markers. Nous reads all formats. New saves always use the newer format above.
 
 ## Index
 
@@ -66,7 +70,7 @@ line per memory with a short description. Open that first to browse.
 ## More
 
 - Plugin + reinstall: https://github.com/stark-shark/claude-nous
-- Full language spec: https://github.com/stark-shark/claude-nous/blob/main/docs/specs/2026-04-08-recall-language-design.md
+- Full language spec: https://github.com/stark-shark/claude-nous/blob/main/docs/specs/2026-04-08-nous-language-design.md
 
 ---
 
@@ -77,9 +81,15 @@ it will be overwritten only if the file is missing.*
 
 export function ensureDecoderFile(memoryDir: string): void {
   const target = path.join(memoryDir, DECODER_FILENAME);
-  if (fs.existsSync(target)) return;
   try {
-    fs.writeFileSync(target, DECODER_CONTENT, "utf8");
+    if (fs.existsSync(target)) return;
+    // Rename (not rewrite) a pre-v1 cheatsheet so user edits survive the move.
+    const legacy = path.join(memoryDir, LEGACY_DECODER_FILENAME);
+    if (fs.existsSync(legacy)) {
+      fs.renameSync(legacy, target);
+      return;
+    }
+    writeFileAtomic(target, DECODER_CONTENT);
   } catch {
     // best-effort — never block a save on this
   }

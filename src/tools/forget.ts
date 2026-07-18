@@ -1,4 +1,4 @@
-import type { RecallConfig } from "../lib/config.js";
+import type { NousConfig } from "../lib/config.js";
 import type { Db } from "../lib/db.js";
 import { setMeta } from "../lib/db.js";
 import type { MemoryDirEntry } from "../lib/memory-dir.js";
@@ -45,7 +45,7 @@ export function handleForget(
   input: ForgetInput,
   db: Db | null,
   _dirs: MemoryDirEntry[],
-  _config: RecallConfig
+  _config: NousConfig
 ): { text: string; isError?: boolean } {
   if (!db) return { text: "Cold-tier DB unavailable — nothing to forget there.", isError: true };
 

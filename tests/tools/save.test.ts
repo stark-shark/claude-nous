@@ -9,7 +9,7 @@ describe("handleSave", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recall-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nous-test-"));
     fs.writeFileSync(path.join(tmpDir, "REGISTRY.md"), "$hub = apps\n$emp = employees\n");
   });
 

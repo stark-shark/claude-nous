@@ -13,7 +13,7 @@ describe("runScan (curator)", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recall-curate-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nous-curate-"));
     fs.writeFileSync(path.join(tmpDir, "REGISTRY.md"), "");
   });
   afterEach(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
@@ -67,7 +67,7 @@ describe("runScan (curator)", () => {
     const file = path.join(tmpDir, "user.md");
     fs.writeFileSync(
       file,
-      `---\nname: user\ndescription: "profile"\nmetadata:\n  node_type: memory\n  type: usr\n  recall:\n    updated: ${iso(365, now)}\n    accessCount: 0\n---\nConnor -> midwest :: IT\n`
+      `---\nname: user\ndescription: "profile"\nmetadata:\n  node_type: memory\n  type: usr\n  nous:\n    updated: ${iso(365, now)}\n    accessCount: 0\n---\nConnor -> midwest :: IT\n`
     );
     const r = runScan([{ projectHash: "p", memoryDir: tmpDir }], DEFAULT_CONFIG, now);
     expect(r.toStale).not.toContain("user");
@@ -81,7 +81,7 @@ describe("runScan (curator)", () => {
     const cfg = { ...DEFAULT_CONFIG, caps: { ...DEFAULT_CONFIG.caps } };
     // write directly to bypass save's cap (simulate a pre-existing bloated file)
     const file = path.join(tmpDir, "project_big.md");
-    fs.writeFileSync(file, `---\nname: big\ndescription: "d"\nmetadata:\n  node_type: memory\n  type: proj\n  recall:\n    updated: ${iso(1, now)}\n    accessCount: 0\n---\n${big}\n`);
+    fs.writeFileSync(file, `---\nname: big\ndescription: "d"\nmetadata:\n  node_type: memory\n  type: proj\n  nous:\n    updated: ${iso(1, now)}\n    accessCount: 0\n---\n${big}\n`);
     const r = runScan([{ projectHash: "p", memoryDir: tmpDir }], cfg, now);
     expect(r.overCap.some((s) => s.startsWith("big"))).toBe(true);
     // body untouched

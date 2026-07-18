@@ -31,6 +31,7 @@ export function loadConfig() {
   const DEFAULTS = {
     capture: { enabled: true, summarize: "auto", minTurns: 3, haikuModel: "claude-haiku-4-5" },
     review: { enabled: true, everyNTurns: 10, mode: "background", approvalGate: true },
+    preturn: { enabled: true, maxSessions: 3, minPromptChars: 12 },
   };
   try {
     const raw = readFileSync(join(homedir(), ".claude", "nous", "nous.config.jsonc"), "utf8");
@@ -39,6 +40,7 @@ export function loadConfig() {
     return {
       capture: { ...DEFAULTS.capture, ...(cfg.capture ?? {}) },
       review: { ...DEFAULTS.review, ...(cfg.review ?? {}) },
+      preturn: { ...DEFAULTS.preturn, ...(cfg.preturn ?? {}) },
     };
   } catch {
     return DEFAULTS;

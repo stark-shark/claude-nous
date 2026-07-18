@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { writeFileAtomic } from "./atomic.js";
 
 export type Registry = Map<string, string>;
 
@@ -67,13 +68,13 @@ export function saveRegistry(registryPath: string, registry: Registry): void {
       content = content.trimEnd() + "\n" + newEntries.join("\n") + "\n";
     }
 
-    fs.writeFileSync(registryPath, content, "utf-8");
+    writeFileAtomic(registryPath, content);
   } else {
     const lines = ["# Entity Registry\n"];
     for (const [code, expansion] of registry) {
       lines.push(`${code} = ${expansion}`);
     }
-    fs.writeFileSync(registryPath, lines.join("\n") + "\n", "utf-8");
+    writeFileAtomic(registryPath, lines.join("\n") + "\n");
   }
 }
 

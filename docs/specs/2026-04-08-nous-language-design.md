@@ -249,7 +249,7 @@ Two forms:
 Interactive mode — lists memory files with type badges, user selects one, decoder expands it.
 
 ```
-$ python recall/decode.py
+$ python nous/decode.py
 
   Nous Memory Decoder
   ─────────────────────
@@ -277,10 +277,10 @@ User asks to decode a memory, Claude reads the file and translates inline. No to
 ## 9. File Layout
 
 ```
-recall/
+nous/
   docs/
     specs/
-      2026-04-08-recall-language-design.md   ← this file
+      2026-04-08-nous-language-design.md   ← this file
   decode.py                                   ← CLI decoder
   README.md                                   ← (only if needed)
 ```
@@ -318,7 +318,7 @@ Mechanical triggers (timers, per-commit) produce low-signal memories. Only write
 
 ## 12. MCP Server
 
-The Nous MCP server (`~/.claude/recall/`) provides runtime tooling for memory operations. Design spec: `_plans/superpowers/specs/2026-04-14-nous-mcp-server-design.md`.
+The Nous MCP server (`~/.claude/nous/`) provides runtime tooling for memory operations. Design spec: `_plans/superpowers/specs/2026-04-14-nous-mcp-server-design.md`.
 
 Tools: `nous_save`, `nous_load`, `nous_search`, `nous_check`, `nous_decode`, `nous_registry`, `nous_export`, `nous_import`.
 

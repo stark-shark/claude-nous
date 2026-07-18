@@ -1,12 +1,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { RecallConfig } from "../lib/config.js";
+import type { NousConfig } from "../lib/config.js";
 import type { MemoryDirEntry } from "../lib/memory-dir.js";
 import { parseHeader, serializeHeader, stripHeader, replaceHeader } from "../lib/parser.js";
 import { loadRegistry } from "../lib/registry.js";
 import { decodeMemory } from "../lib/decode.js";
 import { scanContent, fence } from "../lib/threat.js";
 import { upsertIndexEntry } from "../lib/index-manager.js";
+import { writeFileAtomic } from "../lib/atomic.js";
 
 export interface LoadInput {
   name?: string;
@@ -55,7 +56,7 @@ function findMemoryFile(
 export function handleLoad(
   input: LoadInput,
   memoryDirs: MemoryDirEntry[],
-  config: RecallConfig
+  config: NousConfig
 ): LoadResult {
   const search = input.name ?? input.file;
   if (!search) {
@@ -97,7 +98,7 @@ export function handleLoad(
 
     if (changed) {
       content = replaceHeader(content, header) + "\n";
-      fs.writeFileSync(found.filePath, content, "utf-8");
+      writeFileAtomic(found.filePath, content);
     }
     if (wasArchived && config.maintainIndex && !isUserFile) {
       try {

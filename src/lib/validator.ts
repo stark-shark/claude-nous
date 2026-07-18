@@ -6,7 +6,7 @@ export interface ValidationResult {
   warnings: string[];
 }
 
-const RECALL_SYMBOLS = ["->", "::", "(+)", "!", ">>", "@", "~", "!=", "&"];
+const NOUS_SYMBOLS = ["->", "::", "(+)", "!", ">>", "@", "~", "!=", "&"];
 
 const FB_REQUIRED_FIELDS = ["rule:", "::", "(+)"];
 
@@ -60,7 +60,7 @@ export function validateNotation(
   // Check symbol density — at least 1 symbol per 5 lines of non-code content
   const lines = prose.split("\n").filter((l) => l.trim().length > 0);
   if (lines.length >= 5) {
-    const symbolCount = RECALL_SYMBOLS.reduce(
+    const symbolCount = NOUS_SYMBOLS.reduce(
       (count, sym) => count + (prose.split(sym).length - 1),
       0
     );

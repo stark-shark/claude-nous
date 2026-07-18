@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { RecallConfig } from "./config.js";
+import type { NousConfig } from "./config.js";
 import type { MemoryDirEntry } from "./memory-dir.js";
 import { parseHeader, stripHeader } from "./parser.js";
 import { capFor, measureCap } from "./caps.js";
@@ -28,7 +28,7 @@ export interface OverCapMemory {
 // restricts to strictly-over-cap. Sorted worst-first.
 export function scanCapPressure(
   memoryDirs: MemoryDirEntry[],
-  config: RecallConfig,
+  config: NousConfig,
   opts: { nearPct?: number; overOnly?: boolean } = {}
 ): OverCapMemory[] {
   const nearPct = opts.nearPct ?? 90;

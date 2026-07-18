@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseHeader, serializeHeader, stripHeader } from "./parser.js";
+import { writeFileAtomic } from "./atomic.js";
 
 export interface LinkMaintenanceResult {
   crossProject: string[];
@@ -35,7 +36,7 @@ export function ensureBidirectionalLinks(
     header.links = [...existingLinks, sourceMemory];
     const body = stripHeader(content);
     const updated = `${serializeHeader(header)}\n${body}`;
-    fs.writeFileSync(targetPath, updated, "utf-8");
+    writeFileAtomic(targetPath, updated);
   }
 
   return { crossProject };

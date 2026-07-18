@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { writeFileAtomic } from "./atomic.js";
 
 export const ARCHIVE_FILENAME = "MEMORY_ARCHIVE.md";
 
@@ -69,7 +70,7 @@ function appendToArchive(archivePath: string, entryLines: string[]): void {
     }
   }
 
-  fs.writeFileSync(archivePath, [...existing, ...entryLines].join("\n") + "\n", "utf-8");
+  writeFileAtomic(archivePath, [...existing, ...entryLines].join("\n") + "\n");
 }
 
 export function upsertIndexEntry(
@@ -121,7 +122,7 @@ export function upsertIndexEntry(
     appendToArchive(path.join(path.dirname(indexPath), ARCHIVE_FILENAME), archivedLines);
   }
 
-  fs.writeFileSync(indexPath, lines.join("\n") + "\n", "utf-8");
+  writeFileAtomic(indexPath, lines.join("\n") + "\n");
   return { archived };
 }
 
@@ -135,5 +136,5 @@ export function removeIndexEntry(
   const filtered = collapseBlankRuns(
     lines.filter((line: string) => !line.includes(`(${filename})`))
   );
-  fs.writeFileSync(indexPath, filtered.join("\n") + "\n", "utf-8");
+  writeFileAtomic(indexPath, filtered.join("\n") + "\n");
 }

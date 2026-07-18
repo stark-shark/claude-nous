@@ -24,6 +24,10 @@ export interface IndexFileResult {
   project: string;
   inserted: number;
   redacted: number;
+  // Total user turns recorded for this session (from the sessions aggregate) —
+  // lets the Stop hook drive its review cadence without re-reading the
+  // transcript it just indexed.
+  turns: number;
 }
 
 interface FileRow {
@@ -87,14 +91,32 @@ export function indexFile(
     startOffset = 0;
   }
 
-  let buf: Buffer;
+  // Read ONLY the bytes appended since last_offset — a whole-file read here is
+  // O(session size) per turn, i.e. quadratic over a long session.
+  if (startOffset >= size) {
+    upsertFileRow(db, filePath, mtimeMs, size, startOffset);
+    return null;
+  }
+  let slice: Buffer;
   try {
-    buf = fs.readFileSync(filePath);
+    const fd = fs.openSync(filePath, "r");
+    try {
+      const len = size - startOffset;
+      slice = Buffer.allocUnsafe(len);
+      let read = 0;
+      while (read < len) {
+        const n = fs.readSync(fd, slice, read, len - read, startOffset + read);
+        if (n <= 0) break;
+        read += n;
+      }
+      if (read < len) slice = slice.subarray(0, read);
+    } finally {
+      fs.closeSync(fd);
+    }
   } catch {
     return null;
   }
 
-  const slice = buf.subarray(Math.min(startOffset, buf.length));
   const text = slice.toString("utf8");
   const lastNl = text.lastIndexOf("\n");
 
@@ -209,7 +231,14 @@ export function indexFile(
   }
 
   if (inserted === 0) return null;
-  return { sessionId, project, inserted, redacted: redactedTotal };
+  let turns = 0;
+  try {
+    const row = db.raw.prepare("SELECT turns FROM sessions WHERE session_id=?").get(sessionId);
+    turns = row ? Number(row.turns ?? 0) : 0;
+  } catch {
+    /* ignore */
+  }
+  return { sessionId, project, inserted, redacted: redactedTotal, turns };
 }
 
 function upsertFileRow(db: Db, p: string, mtime: number, size: number, offset: number): void {

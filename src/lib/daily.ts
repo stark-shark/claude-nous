@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import type { RecallConfig } from "./config.js";
+import type { NousConfig } from "./config.js";
 
 // Daily digest files: memory/days/YYYY-MM-DD.md. Each session summary appends a
 // section for its date; SessionStart injects today + the previous N days as the
@@ -64,7 +64,7 @@ function ymd(d: Date): string {
 }
 
 // Build the SessionStart injection: today + previous (injectDays-1) days, capped.
-export function injectDaily(cfg: RecallConfig, base?: string, now?: Date): string {
+export function injectDaily(cfg: NousConfig, base?: string, now?: Date): string {
   if (!cfg.daily.enabled) return "";
   const dir = daysDir(base);
   const days = Math.max(1, cfg.daily.injectDays);

@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 
-export interface RecallConfig {
+export interface NousConfig {
   maintainIndex: boolean;
   indexFile: string;
   indexMaxLines: number;
@@ -45,7 +45,6 @@ export interface RecallConfig {
   review: {
     enabled: boolean;
     everyNTurns: number;   // interval for the memory-save review
-    rulesInterval: number; // interval for the self-build (RULES/skills) review
     approvalGate: boolean; // require user OK before the review writes memory
     // "background" = post-turn detached Haiku review that stages proposals;
     // "nudge" = legacy in-context prompt; "off" = disabled.
@@ -75,6 +74,15 @@ export interface RecallConfig {
     redact: boolean;            // strip secrets/PII before FTS + injection
     redactExtra: string[];      // user regex additions
   };
+  // Pre-turn recall injection: on every user prompt, LLM-free FTS+RRF over past
+  // sessions injects up to maxSessions one-line reminders as context. The push
+  // half of the recall ladder — without it, recall only happens when the model
+  // thinks to search.
+  preturn: {
+    enabled: boolean;
+    maxSessions: number;    // max one-line session reminders injected
+    minPromptChars: number; // skip trivial prompts ("yes", "continue")
+  };
   // Recall ladder tuning.
   ladder: {
     expandWindow: number;   // ± messages around a hit in anchored view
@@ -89,8 +97,6 @@ export interface RecallConfig {
   rules: { enabled: boolean; approvalGate: boolean; maxBackups: number };
   // Agent-authored procedural skills.
   skills: { enabled: boolean; approvalGate: boolean; dir: string; maxBackups: number };
-  // Self-maintaining MEMORY.md / user.md.
-  maintain: { autoLowRisk: boolean; gateContentEdits: boolean; gateUserEdits: boolean };
   // DB retention/maintenance. Session-prune OFF by default (total-recall goal).
   retention: {
     vacuum: boolean;
@@ -100,7 +106,10 @@ export interface RecallConfig {
   };
 }
 
-export const DEFAULT_CONFIG: RecallConfig = {
+// Pre-v1 name (plugin was Recall through v1.0) — kept as a compat alias.
+export type RecallConfig = NousConfig;
+
+export const DEFAULT_CONFIG: NousConfig = {
   maintainIndex: true,
   indexFile: "MEMORY.md",
   indexMaxLines: 200,
@@ -136,7 +145,6 @@ export const DEFAULT_CONFIG: RecallConfig = {
   review: {
     enabled: true,
     everyNTurns: 10,
-    rulesInterval: 10,
     approvalGate: true,
     mode: "background",
   },
@@ -154,6 +162,11 @@ export const DEFAULT_CONFIG: RecallConfig = {
     redact: true,
     redactExtra: [],
   },
+  preturn: {
+    enabled: true,
+    maxSessions: 3,
+    minPromptChars: 12,
+  },
   ladder: {
     expandWindow: 5,
     bookend: 3,
@@ -169,7 +182,6 @@ export const DEFAULT_CONFIG: RecallConfig = {
     dir: "~/.claude/skills",
     maxBackups: 20,
   },
-  maintain: { autoLowRisk: true, gateContentEdits: true, gateUserEdits: true },
   retention: {
     vacuum: true,
     vacuumMinIntervalHours: 24,
@@ -188,12 +200,12 @@ function stripJsoncComments(text: string): string {
     .replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
-export function loadConfig(configPath: string): RecallConfig {
+export function loadConfig(configPath: string): NousConfig {
   if (!fs.existsSync(configPath)) {
     return { ...DEFAULT_CONFIG };
   }
 
-  let userConfig: Partial<RecallConfig>;
+  let userConfig: Partial<NousConfig>;
   try {
     const raw = fs.readFileSync(configPath, "utf-8");
     const stripped = stripJsoncComments(raw);
@@ -240,6 +252,10 @@ export function loadConfig(configPath: string): RecallConfig {
       ...DEFAULT_CONFIG.capture,
       ...(userConfig.capture ?? {}),
     },
+    preturn: {
+      ...DEFAULT_CONFIG.preturn,
+      ...(userConfig.preturn ?? {}),
+    },
     ladder: {
       ...DEFAULT_CONFIG.ladder,
       ...(userConfig.ladder ?? {}),
@@ -255,10 +271,6 @@ export function loadConfig(configPath: string): RecallConfig {
     skills: {
       ...DEFAULT_CONFIG.skills,
       ...(userConfig.skills ?? {}),
-    },
-    maintain: {
-      ...DEFAULT_CONFIG.maintain,
-      ...(userConfig.maintain ?? {}),
     },
     retention: {
       ...DEFAULT_CONFIG.retention,

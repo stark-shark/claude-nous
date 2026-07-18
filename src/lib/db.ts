@@ -125,6 +125,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   summary TEXT,
   decisions TEXT,
   open_threads TEXT,
+  keywords TEXT,
   summarized_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project);
@@ -180,6 +181,7 @@ const EXPECTED_COLUMNS: Record<string, Record<string, string>> = {
     summary: "TEXT",
     decisions: "TEXT",
     open_threads: "TEXT",
+    keywords: "TEXT",
     summarized_at: "TEXT",
   },
   messages: {

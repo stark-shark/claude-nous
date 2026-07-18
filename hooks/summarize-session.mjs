@@ -20,8 +20,10 @@ const sessionId =
       ? transcript.split(/[\\/]/).pop().replace(/\.jsonl$/, "")
       : "";
 
-// 1. Final incremental index.
+// 1. Final incremental index, then interval-gated DB maintenance (VACUUM /
+// optional prune). Both cheap no-ops when nothing to do.
 if (transcript) runNous(["--index-file", transcript], undefined, cwd, 10000);
+runNous(["--retention"], undefined, cwd, 60000);
 if (!sessionId || cfg.capture.summarize !== "auto") process.exit(0);
 
 // 2. Only summarize sessions with enough substance.

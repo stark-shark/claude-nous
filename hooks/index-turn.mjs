@@ -18,24 +18,30 @@ const transcript = typeof evt.transcript_path === "string" ? evt.transcript_path
 if (!transcript) process.exit(0);
 
 // 1. Index the just-finished turn (LLM-free).
-runNous(["--index-file", transcript], undefined, cwd, 10000);
+const indexOut = runNous(["--index-file", transcript], undefined, cwd, 10000) ?? "";
 
 // 2. Background review on interval (Hermes-style post-turn review). Durable turn
-// count derived from the transcript itself (survives agent rebuilds — Hermes
-// #22357), so we don't rely on a fragile in-memory counter.
+// count comes from the sessions aggregate the indexer just recomputed (turns=N
+// in its output) — no second whole-transcript read per turn. Falls back to
+// counting the transcript only when the DB tier is unavailable.
 if (cfg.review.mode === "background" && cfg.review.enabled !== false) {
   let userTurns = 0;
-  try {
-    for (const line of readFileSync(transcript, "utf8").split("\n")) {
-      if (!line.trim()) continue;
-      try {
-        if (JSON.parse(line).type === "user") userTurns++;
-      } catch {
-        /* skip */
+  const m = indexOut.match(/turns=(\d+)/);
+  if (m) {
+    userTurns = parseInt(m[1], 10);
+  } else if (/sqlite unavailable/i.test(indexOut)) {
+    try {
+      for (const line of readFileSync(transcript, "utf8").split("\n")) {
+        if (!line.trim()) continue;
+        try {
+          if (JSON.parse(line).type === "user") userTurns++;
+        } catch {
+          /* skip */
+        }
       }
+    } catch {
+      /* no transcript */
     }
-  } catch {
-    /* no transcript */
   }
   const interval = cfg.review.everyNTurns > 0 ? cfg.review.everyNTurns : 10;
   if (userTurns > 0 && userTurns % interval === 0) {

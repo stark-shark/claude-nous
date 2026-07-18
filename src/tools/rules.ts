@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { RecallConfig } from "../lib/config.js";
+import type { NousConfig } from "../lib/config.js";
 import {
   nousDir,
   sha,
@@ -35,7 +35,7 @@ function readRules(): string {
   }
 }
 
-export function handleRules(input: RulesInput, config: RecallConfig): { text: string; isError?: boolean } {
+export function handleRules(input: RulesInput, config: NousConfig): { text: string; isError?: boolean } {
   const file = rulesPath();
 
   switch (input.action) {

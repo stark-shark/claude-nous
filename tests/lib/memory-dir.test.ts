@@ -17,7 +17,7 @@ describe("projectPathToHash", () => {
 describe("getMemoryDir", () => {
   let tmpDir: string;
 
-  beforeEach(() => { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recall-test-")); });
+  beforeEach(() => { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nous-test-")); });
   afterEach(() => { fs.rmSync(tmpDir, { recursive: true, force: true }); });
 
   it("returns path when memory dir exists", () => {
@@ -34,7 +34,7 @@ describe("getMemoryDir", () => {
 describe("discoverAllMemoryDirs", () => {
   let tmpDir: string;
 
-  beforeEach(() => { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recall-test-")); });
+  beforeEach(() => { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nous-test-")); });
   afterEach(() => { fs.rmSync(tmpDir, { recursive: true, force: true }); });
 
   it("finds all project memory dirs", () => {

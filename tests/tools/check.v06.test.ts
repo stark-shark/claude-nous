@@ -6,12 +6,12 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 
-describe("recall_check — lifecycle + caps", () => {
+describe("nous_check — lifecycle + caps", () => {
   let tmpDir: string;
   let dirs: { projectHash: string; memoryDir: string }[];
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recall-checkv06-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nous-checkv06-"));
     fs.writeFileSync(path.join(tmpDir, "REGISTRY.md"), "");
     dirs = [{ projectHash: "p", memoryDir: tmpDir }];
   });
@@ -51,8 +51,8 @@ describe("global user.md routing", () => {
   let globalDir: string;
 
   beforeEach(() => {
-    projDir = fs.mkdtempSync(path.join(os.tmpdir(), "recall-proj-"));
-    globalDir = fs.mkdtempSync(path.join(os.tmpdir(), "recall-global-"));
+    projDir = fs.mkdtempSync(path.join(os.tmpdir(), "nous-proj-"));
+    globalDir = fs.mkdtempSync(path.join(os.tmpdir(), "nous-global-"));
     fs.writeFileSync(path.join(projDir, "REGISTRY.md"), "");
   });
   afterEach(() => {

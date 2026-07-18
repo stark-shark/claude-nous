@@ -10,7 +10,7 @@ describe("handleSearch", () => {
   let memB: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recall-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nous-test-"));
     memA = path.join(tmpDir, "a", "memory");
     memB = path.join(tmpDir, "b", "memory");
     fs.mkdirSync(memA, { recursive: true });

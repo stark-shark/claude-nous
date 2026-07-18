@@ -26,7 +26,7 @@ You have access to the Nous MCP server which provides tools for managing compres
 
 EVERY `nous_*` tool call MUST be wrapped in `TaskCreate` / `TaskUpdate`. This controls how memory operations appear — without it, output is noisy inline text.
 
-**Spinner text:** Set `activeForm` on the FIRST task to describe the recall operation:
+**Spinner text:** Set `activeForm` on the FIRST task to describe the memory operation:
 - Loading/searching → `"Recalling memories…"`
 - Saving → `"Storing memories…"`
 - Health checks → `"Checking memory health…"`
@@ -51,12 +51,12 @@ Pinned display:
 **Flow:**
 1. Identify ALL distinct topics in the request
 2. Create ALL tasks upfront — user sees full scope before work begins
-3. Mark each in_progress → call recall tool → mark complete
+3. Mark each in_progress → call nous tool → mark complete
 4. Respond with combined results
 
 ## When to Use Nous
 
-Use recall tools (not manual file Read/Write) for ALL memory operations:
+Use nous tools (not manual file Read/Write) for ALL memory operations:
 
 - **User asks about a project/feature** → `nous_search` then `nous_load`
 - **Saving new knowledge** → `nous_save` with Nous notation
@@ -114,7 +114,7 @@ The plugin ships a `nous-worker` subagent pinned to **Haiku** — same nous_* to
 Example:
 ```
 Agent({ subagent_type: "nous-worker",
-        description: "expand recall query",
+        description: "expand search query",
         prompt: "Return a JSON array of 5 alternative search queries (synonyms + entities) for: 'payment processing'. JSON only." })
 ```
 

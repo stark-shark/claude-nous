@@ -16,7 +16,7 @@ describe("handleCheck", () => {
   let memDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recall-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nous-test-"));
     memDir = path.join(tmpDir, "proj", "memory");
     fs.mkdirSync(memDir, { recursive: true });
     fs.writeFileSync(path.join(memDir, "REGISTRY.md"), "$emp = employees\n");

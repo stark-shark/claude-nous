@@ -75,7 +75,8 @@ interface RawHit {
 export function searchSessionsDb(
   db: Db,
   input: SessionSearchInput,
-  k = 60
+  k = 60,
+  bookend = 3
 ): SessionSearchResult {
   const limit = input.limit ?? 20;
   const match = sanitizeFtsQuery(input.query);
@@ -138,11 +139,11 @@ export function searchSessionsDb(
     messageId: h.mid,
   }));
 
-  const text = formatDiscovery(db, input.query, confidence, top);
+  const text = formatDiscovery(db, input.query, confidence, top, bookend);
   return { matches, text, confidence, engine: "fts" };
 }
 
-function formatDiscovery(db: Db, query: string, confidence: number, hits: RawHit[]): string {
+function formatDiscovery(db: Db, query: string, confidence: number, hits: RawHit[], bookend = 3): string {
   if (hits.length === 0) return `No past sessions mention '${query}'.`;
   const pct = Math.round(confidence * 100);
   const lines: string[] = [
@@ -152,7 +153,7 @@ function formatDiscovery(db: Db, query: string, confidence: number, hits: RawHit
 
   // Expand the top hit's session: bookends (goal + resolution) + window at match.
   const top = hits[0];
-  const be = bookends(db, top.sid, 3);
+  const be = bookends(db, top.sid, bookend);
   const win = getAnchoredView(db, top.sid, { around: top.mid, window: 3 });
   const dateRange = sessionDateRange(db, top.sid);
   lines.push(`▸ Top — session ${top.sid.slice(0, 8)} @ ${top.project}  [${dateRange}]`);
@@ -195,8 +196,10 @@ interface MsgRow {
 
 function sessionRows(db: Db, sessionId: string): MsgRow[] {
   try {
+    // role='meta' rows are FTS enrichment (summary+keywords), not conversation —
+    // they'd pollute goal/resolution bookends and scroll views.
     return db.raw
-      .prepare("SELECT id, role, ts, content FROM messages WHERE session_id=? ORDER BY id")
+      .prepare("SELECT id, role, ts, content FROM messages WHERE session_id=? AND role<>'meta' ORDER BY id")
       .all(sessionId) as unknown as MsgRow[];
   } catch {
     return [];

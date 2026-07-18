@@ -145,6 +145,6 @@ Uninstall (files are NOT touched):
 
 ## Where to learn more
 
-- Full language spec: https://github.com/stark-shark/claude-nous/blob/main/docs/specs/2026-04-08-recall-language-design.md
+- Full language spec: https://github.com/stark-shark/claude-nous/blob/main/docs/specs/2026-04-08-nous-language-design.md
 - README + config reference: https://github.com/stark-shark/claude-nous
 - Issues / feedback: https://github.com/stark-shark/claude-nous/issues

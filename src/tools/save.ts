@@ -1,10 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { MemoryType } from "../lib/symbols.js";
-import type { RecallConfig } from "../lib/config.js";
+import type { NousConfig } from "../lib/config.js";
 import { serializeHeader, parseHeader, stripHeader, type MemoryHeader } from "../lib/parser.js";
 import { validateNotation } from "../lib/validator.js";
-import { findDuplicate } from "../lib/dedup.js";
+import { findDuplicate, findNearDuplicate } from "../lib/dedup.js";
 import { loadRegistry, findUnknownEntities } from "../lib/registry.js";
 import { upsertIndexEntry, ARCHIVE_FILENAME } from "../lib/index-manager.js";
 import { ensureBidirectionalLinks } from "../lib/links.js";
@@ -12,6 +12,7 @@ import { ensureDecoderFile } from "../lib/decoder-file.js";
 import { capFor, measureCap, usageLine, overflowError } from "../lib/caps.js";
 import { scanContent } from "../lib/threat.js";
 import { backupFile } from "../lib/selfbuild.js";
+import { writeFileAtomic } from "../lib/atomic.js";
 
 export interface SaveInput {
   name: string;
@@ -33,6 +34,18 @@ export interface SaveResult {
   warnings: string[];
   filename: string;
 }
+
+export interface SaveOptions {
+  // Validate everything (security, cap, notation, dup, collision) but write
+  // nothing. Used by batch saves to guarantee all-or-nothing semantics.
+  dryRun?: boolean;
+}
+
+// Anti-thrash (Hermes memory_tool #42405): after this many over-cap failures
+// for the SAME memory within one server process (≈ one session), stop offering
+// the consolidate-retry loop and tell the model to move on.
+const MAX_OVERCAP_FAILURES = 3;
+const overCapFailures = new Map<string, number>();
 
 function nameToFilename(name: string, type: MemoryType): string {
   const prefix =
@@ -56,7 +69,8 @@ function todayStr(): string {
 export function handleSave(
   input: SaveInput,
   memoryDir: string,
-  config: RecallConfig
+  config: NousConfig,
+  opts: SaveOptions = {}
 ): SaveResult {
   const warnings: string[] = [];
   // Reserve the canonical user.md for the usr-type "user"/"profile" memory so it
@@ -104,6 +118,21 @@ export function handleSave(
     const cap = capFor(input.type, filename, config);
     const usage = measureCap(input.content.length, cap);
     if (!usage.unlimited && usage.over > 0) {
+      // Anti-thrash: repeated over-cap retries on the same memory burn the turn.
+      // After MAX_OVERCAP_FAILURES, return terminal guidance instead of the
+      // consolidate-retry loop.
+      const failures = (overCapFailures.get(filePath) ?? 0) + 1;
+      overCapFailures.set(filePath, failures);
+      if (failures > MAX_OVERCAP_FAILURES) {
+        return {
+          text:
+            `Cap exceeded for '${input.name}' — ${failures} failed attempts this session. STOP retrying this save. ` +
+            `Save only the single most important new fact (well under ${usage.cap} chars), or defer with nous_maintain scan, and return to the user's task.`,
+          isError: true,
+          warnings: [],
+          filename,
+        };
+      }
       let existingBody: string | null = null;
       if (fs.existsSync(filePath)) {
         try {
@@ -164,6 +193,15 @@ export function handleSave(
     };
   }
 
+  // Near-duplicate (token overlap): same fact reworded shouldn't fork into a
+  // second memory. Warn — the save still happens (the model may know better).
+  const nearDup = findNearDuplicate(input.content, existingFiles);
+  if (nearDup) {
+    warnings.push(
+      `near-duplicate of '${nearDup.filename}' (${Math.round(nearDup.similarity * 100)}% token overlap) — consider consolidating into that memory instead`
+    );
+  }
+
   // Check registry
   const registryPath = path.join(memoryDir, config.registryFile);
   const registry = loadRegistry(registryPath);
@@ -181,6 +219,16 @@ export function handleSave(
   if (isUpdate) {
     const existing = fs.readFileSync(filePath, "utf-8");
     const existingHeader = parseHeader(existing);
+
+    // External-drift guard (Hermes memory_tool #26045): memory files are
+    // co-owned with Claude Code's native auto-memory and hand edits. If the
+    // on-disk file no longer parses as a Nous memory, say so — the pre-write
+    // backup below is then the only copy of whatever was there.
+    if (!existingHeader) {
+      warnings.push(
+        `existing ${filename} was not in Nous format (external edit?) — prior content backed up to .backups before overwrite`
+      );
+    }
 
     // Detect slug collision: same filename but different logical memory name
     if (
@@ -218,6 +266,15 @@ export function handleSave(
     header.updated = todayStr();
   }
 
+  // Dry run (batch phase 1): everything validated, nothing written.
+  if (opts.dryRun) {
+    return {
+      text: `OK (dry run): '${input.name}' (${input.type}) → ${filename}`,
+      warnings,
+      filename,
+    };
+  }
+
   // Write file. Back up the prior version first on any overwrite so a rewrite
   // (esp. an autonomous condense via nous_maintain) is never a silent, permanent
   // loss of hand-written content — the anti-Hermes-self-rewrite guardrail.
@@ -234,7 +291,8 @@ export function handleSave(
       /* best effort — never block a save on backup failure */
     }
   }
-  fs.writeFileSync(filePath, fileContent, "utf-8");
+  writeFileAtomic(filePath, fileContent);
+  overCapFailures.delete(filePath); // successful save clears the thrash counter
 
   // Refresh decoder cheatsheet alongside memories — survives plugin uninstall.
   ensureDecoderFile(memoryDir);

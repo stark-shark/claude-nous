@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import type { RecallConfig } from "../lib/config.js";
+import type { NousConfig } from "../lib/config.js";
 import {
   nousDir,
   sha,
@@ -30,10 +30,10 @@ const RESERVED = new Set(["nous", "recall"]);
 function expandHome(p: string): string {
   return p.startsWith("~") ? path.join(os.homedir(), p.slice(1).replace(/^[\\/]/, "")) : p;
 }
-function skillsRoot(config: RecallConfig): string {
+function skillsRoot(config: NousConfig): string {
   return expandHome(config.skills.dir);
 }
-function skillFile(config: RecallConfig, name: string): string {
+function skillFile(config: NousConfig, name: string): string {
   return path.join(skillsRoot(config), name, "SKILL.md");
 }
 function backupDir(name: string): string {
@@ -61,7 +61,7 @@ function validName(name: string): string | null {
   return null;
 }
 
-export function handleSkill(input: SkillInput, config: RecallConfig): { text: string; isError?: boolean } {
+export function handleSkill(input: SkillInput, config: NousConfig): { text: string; isError?: boolean } {
   const root = skillsRoot(config);
 
   switch (input.action) {

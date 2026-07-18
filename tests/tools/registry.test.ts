@@ -8,7 +8,7 @@ describe("handleRegistry", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recall-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nous-test-"));
   });
 
   afterEach(() => { fs.rmSync(tmpDir, { recursive: true, force: true }); });

@@ -50,7 +50,7 @@ describe("parseHeader legacy field validation", () => {
 });
 
 // =============================================================================
-// parseHeader — new (Claude Code-compatible) format with metadata.recall.*
+// parseHeader — new (Claude Code-compatible) format with metadata.nous.*
 // =============================================================================
 
 describe("parseHeader (new Claude Code-compatible format)", () => {
@@ -61,13 +61,13 @@ describe("parseHeader (new Claude Code-compatible format)", () => {
     "metadata:",
     "  node_type: memory",
     "  type: fb",
-    "  recall:",
+    "  nous:",
     '    humanName: "FK CASCADE"',
     "    created: 2026-04-12",
     "    updated: 2026-05-29",
     "    accessCount: 7",
     "    links:",
-    "      - project_recall",
+    "      - project_nous",
     "      - feedback_invite_flow",
     "---",
     "body content",
@@ -81,7 +81,7 @@ describe("parseHeader (new Claude Code-compatible format)", () => {
     expect(header?.created).toBe("2026-04-12");
     expect(header?.updated).toBe("2026-05-29");
     expect(header?.accessCount).toBe(7);
-    expect(header?.links).toEqual(["project_recall", "feedback_invite_flow"]);
+    expect(header?.links).toEqual(["project_nous", "feedback_invite_flow"]);
   });
 
   it("falls back to slug as name when humanName is absent", () => {
@@ -112,7 +112,7 @@ describe("parseHeader (new Claude Code-compatible format)", () => {
     expect(parseHeader(bad)).toBeNull();
   });
 
-  it("ignores originSessionId and other unknown metadata fields", () => {
+  it("ignores originSessionId and other unknown metadata fields (and reads the legacy metadata.recall sub-block)", () => {
     const withExtras = [
       "---",
       "name: x",
@@ -121,7 +121,7 @@ describe("parseHeader (new Claude Code-compatible format)", () => {
       "  node_type: memory",
       "  type: usr",
       "  originSessionId: e7093ba0-457e-4f45-bb43-b60b8a2d22f4",
-      "  recall:",
+      "  recall:", // pre-v1 sub-block name — read-compat must keep working
       "    created: 2026-05-29",
       "---",
       "body",
@@ -153,7 +153,7 @@ describe("parseHeader migration: new format on top, legacy block below", () => {
     "C:2026-05-29",
     "U:2026-05-29",
     "A:3",
-    "L:project_recall",
+    "L:project_nous",
     "---",
     "body content",
   ].join("\n");
@@ -165,7 +165,7 @@ describe("parseHeader migration: new format on top, legacy block below", () => {
     expect(header?.created).toBe("2026-05-29");
     expect(header?.updated).toBe("2026-05-29");
     expect(header?.accessCount).toBe(3);
-    expect(header?.links).toEqual(["project_recall"]);
+    expect(header?.links).toEqual(["project_nous"]);
   });
 
   it("stripHeader skips both blocks and returns body", () => {
@@ -228,7 +228,7 @@ describe("serialize + parse round-trip", () => {
       created: "2026-04-12",
       updated: "2026-05-29",
       accessCount: 11,
-      links: ["project_recall", "feedback_invite_flow"],
+      links: ["project_nous", "feedback_invite_flow"],
     };
     const serialized = serializeHeader(original);
     const parsed = parseHeader(`${serialized}\nbody`);

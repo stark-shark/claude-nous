@@ -1,4 +1,4 @@
-import type { RecallConfig } from "./config.js";
+import type { NousConfig } from "./config.js";
 import type { MemoryType } from "./symbols.js";
 
 // Hermes-style bounded memory: hard caps on the notation body force the model to
@@ -12,7 +12,7 @@ import type { MemoryType } from "./symbols.js";
 export function capFor(
   type: MemoryType,
   filename: string,
-  config: RecallConfig
+  config: NousConfig
 ): number {
   if (filename === config.userMemory.filename) return config.caps.user;
   return config.caps[type] ?? 0;
@@ -44,7 +44,7 @@ export function usageLine(
   type: MemoryType,
   filename: string,
   usage: CapUsage,
-  config: RecallConfig
+  config: NousConfig
 ): string {
   if (usage.unlimited) return "";
   const label =

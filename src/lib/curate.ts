@@ -1,10 +1,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { RecallConfig } from "./config.js";
+import type { NousConfig } from "./config.js";
 import type { MemoryDirEntry } from "./memory-dir.js";
 import { parseHeader, replaceHeader, stripHeader, type MemoryState } from "./parser.js";
 import { capFor, measureCap } from "./caps.js";
 import { removeIndexEntry } from "./index-manager.js";
+import { writeFileAtomic } from "./atomic.js";
 
 // Auto-apply low-risk curation scan — the "occasional scan" that decides what's
 // stale, what to archive, and what needs attention. Lifecycle is pure rules (no
@@ -28,7 +29,7 @@ function ageDays(updated: string | undefined, now: number): number | null {
 
 export function runScan(
   memoryDirs: MemoryDirEntry[],
-  config: RecallConfig,
+  config: NousConfig,
   now: number = Date.now()
 ): CurateReport {
   const report: CurateReport = {
@@ -106,7 +107,7 @@ export function runScan(
       if (next && next !== current) {
         header.state = next;
         try {
-          fs.writeFileSync(filePath, replaceHeader(content, header) + "\n", "utf-8");
+          writeFileAtomic(filePath, replaceHeader(content, header) + "\n");
         } catch {
           continue;
         }

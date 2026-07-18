@@ -72,8 +72,8 @@ function findLegacyHeaderBlock(
 // -----------------------------------------------------------------------------
 // Minimal YAML parser for our schema:
 //   top-level scalars (name, description)
-//   one nested block (metadata) containing scalars and one sub-block (recall)
-//   recall contains scalars and one list (links) of scalar items
+//   one nested block (metadata) containing scalars and one sub-block (nous)
+//   nous contains scalars and one list (links) of scalar items
 // -----------------------------------------------------------------------------
 
 type YamlValue = string | number | boolean | null | YamlValue[] | YamlObject;
@@ -180,14 +180,14 @@ function parseNewFormat(lines: string[], block: FrontmatterBlock): MemoryHeader 
   if (!type) return null;
 
   // Read-compat: v1 writes metadata.nous; legacy memories use metadata.recall.
-  const recallRaw = meta.nous ?? meta.recall;
-  const recall: YamlObject =
-    recallRaw && typeof recallRaw === "object" && !Array.isArray(recallRaw)
-      ? (recallRaw as YamlObject)
+  const nousRaw = meta.nous ?? meta.recall;
+  const nousMeta: YamlObject =
+    nousRaw && typeof nousRaw === "object" && !Array.isArray(nousRaw)
+      ? (nousRaw as YamlObject)
       : {};
 
   const nameSlug = typeof data.name === "string" ? data.name : "";
-  const humanName = typeof recall.humanName === "string" ? recall.humanName : "";
+  const humanName = typeof nousMeta.humanName === "string" ? nousMeta.humanName : "";
   const description = typeof data.description === "string" ? data.description : "";
 
   const name = humanName || nameSlug;
@@ -195,21 +195,21 @@ function parseNewFormat(lines: string[], block: FrontmatterBlock): MemoryHeader 
 
   const header: MemoryHeader = { type, name, description };
 
-  if (typeof recall.created === "string" && isValidIsoDate(recall.created)) {
-    header.created = recall.created;
+  if (typeof nousMeta.created === "string" && isValidIsoDate(nousMeta.created)) {
+    header.created = nousMeta.created;
   }
-  if (typeof recall.updated === "string" && isValidIsoDate(recall.updated)) {
-    header.updated = recall.updated;
+  if (typeof nousMeta.updated === "string" && isValidIsoDate(nousMeta.updated)) {
+    header.updated = nousMeta.updated;
   }
-  if (typeof recall.accessCount === "number" && recall.accessCount >= 0) {
-    header.accessCount = recall.accessCount;
+  if (typeof nousMeta.accessCount === "number" && nousMeta.accessCount >= 0) {
+    header.accessCount = nousMeta.accessCount;
   }
-  if (Array.isArray(recall.links)) {
-    const links = recall.links.filter((l): l is string => typeof l === "string" && l.length > 0);
+  if (Array.isArray(nousMeta.links)) {
+    const links = nousMeta.links.filter((l): l is string => typeof l === "string" && l.length > 0);
     if (links.length > 0) header.links = links;
   }
-  if (typeof recall.state === "string" && VALID_STATES.includes(recall.state as MemoryState)) {
-    header.state = recall.state as MemoryState;
+  if (typeof nousMeta.state === "string" && VALID_STATES.includes(nousMeta.state as MemoryState)) {
+    header.state = nousMeta.state as MemoryState;
   }
 
   return header;
@@ -272,7 +272,7 @@ function parseLegacyFormat(lines: string[], block: FrontmatterBlock): MemoryHead
 // -----------------------------------------------------------------------------
 
 // Tries the new (Claude Code-compatible) format first. Falls back to the legacy
-// T:/D:/... format. If the new format succeeds but lacks the metadata.recall
+// T:/D:/... format. If the new format succeeds but lacks the metadata.nous
 // sub-block, also scans for a legacy block (e.g. an old Nous header that
 // Claude Code's normalization left untouched beneath its own frontmatter) and
 // merges in any dates / access count / links from there. This preserves

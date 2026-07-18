@@ -118,7 +118,7 @@ The auto-apply scan only mutates the **current project** (the cwd the session wa
 ### userMemory.filename
 - **Type:** string
 - **Default:** "user.md"
-- **Description:** The reserved file a `usr`-type memory named `user` or `profile` is written to. This file is the always-loaded user profile, stored globally at `~/.claude/recall/memory/`.
+- **Description:** The reserved file a `usr`-type memory named `user` or `profile` is written to. This file is the always-loaded user profile, stored globally at `~/.claude/nous/memory/`.
 
 ### userMemory.alwaysLoad
 - **Type:** boolean

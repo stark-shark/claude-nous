@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.2.0
+
+Bug/gap fixes and Hermes-inspired features from a comparative audit against hermes-agent's memory subsystem.
+
+**Fixes**
+
+- **fix(import):** `nous_import` now preserves full lifecycle metadata (`created`/`updated`/`accessCount`/`links`/`state`), writes the CURRENT header format (previously reconstructed the legacy `T:/D:` header and dropped metadata), security-scans content, dedups by content hash, updates MEMORY.md, routes the user profile to the global dir, and honors a new `project` filter. Unsafe filenames are rejected.
+- **fix(retention):** the `retention.*` config was defined but entirely unimplemented — `nous.db` grew unboundedly. Now implemented: interval-gated `VACUUM` (SessionEnd, `--retention`) and optional pruning that reduces old, already-summarized sessions to one searchable summary(+keywords) row. Unsummarized sessions are never pruned. Prune remains OFF by default.
+- **fix(indexer):** per-turn indexing read the whole transcript twice per turn (O(session²) over a long session). Now reads only bytes appended since `last_offset`, and the Stop hook takes its review-cadence turn count from the indexer's `turns=` output instead of re-parsing the transcript.
+- **fix(config):** removed dead keys (`review.rulesInterval`, `maintain.*`); wired previously-ignored `ladder.bookend` and `userMemory.alwaysLoad`.
+- **fix(io):** all memory/state file writes are atomic (temp + rename) — MCP server, Stop-hook indexer, and detached review worker can no longer tear each other's writes.
+- **polish(rename):** internals renamed Recall→Nous (`NousConfig` with `RecallConfig` alias, `NOUS_NOTATION.md` cheatsheet with automatic rename of an existing `RECALL_NOTATION.md`, spec file, docs, test fixtures). Legacy read-compat (`metadata.recall.*`, `~/.claude/recall` migration) unchanged.
+
+**Features**
+
+- **feat(preturn):** pre-turn recall injection — on every user prompt, an LLM-free FTS+RRF pass over past sessions injects up to `preturn.maxSessions` one-line reminders with session citations. Converts episodic recall from pull-only ("remembers if it thinks to search") to push ("reminded by default"). New `preturn.*` config; UserPromptSubmit hook consolidated into `user-prompt.mjs`.
+- **feat(search):** hot-tier `nous_search` is now ranked retrieval (was: unranked substring scan) — query-term relevance (name > description > body) fused via RRF with recency and `accessCount`; archived memories demoted, not hidden; mtime-cached file reads.
+- **feat(summarize):** the session summarizer also emits 5-10 semantic keywords (synonyms/topics not verbatim in the transcript), stored in `sessions.keywords` and FTS-indexed via a hidden `meta` row — paraphrase queries now hit. Summaries themselves became searchable as a side effect.
+- **feat(save):** Hermes-style anti-thrash — after 3 over-cap failures on the same memory in one session, the error becomes terminal guidance instead of a retry loop. `batch` saves are all-or-nothing (every spec validated before anything is written). Near-duplicate detection (token-overlap Jaccard ≥0.7) warns on save. Overwriting a file that no longer parses as a Nous memory warns and backs up first (external-drift guard).
+- **feat(boot):** SessionStart hook consolidated from ~5 node spawns to one `--boot` CLI call.
+
 ## 1.1.5
 
 - **fix(parser):** accept long-form `type:` aliases (`project`→`proj`, `feedback`→`fb`, `reference`→`ref`, `user`→`usr`), case/whitespace-tolerant. Claude Code's native auto-memory writes long-form types; previously such co-owned memory files silently failed to parse and went **invisible** to Nous (didn't load, didn't index, broke links pointing at them). Now they canonicalize on read.
