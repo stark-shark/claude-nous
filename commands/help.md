@@ -87,7 +87,7 @@ A copy of this cheatsheet is also written to `~/.claude/projects/<project-hash>/
 | `/nous:forget <query>` | Purge a session/query from the cold tier (preview → confirm). |
 | `/nous:status` | Memory + cold-tier health report. |
 | `/nous:rules` | View/edit the save-rules that govern what gets remembered. |
-| `/nous:skill` | Author/evolve the agent's own procedural skills. |
+| `/nous:skills` | Author/evolve the agent's own procedural skills. |
 | `/nous:import` | Day-one backfill: index + summarize existing Claude Code history. |
 | `/nous:export` | Back up memories to JSON. |
 | `/nous:help` | This overview. |
