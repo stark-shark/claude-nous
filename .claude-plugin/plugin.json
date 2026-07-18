@@ -1,7 +1,7 @@
 {
   "name": "nous",
   "description": "Compressed memory notation system for Claude Code. Provides MCP tools for reading, writing, searching, and managing memories with notation enforcement, cross-project search, health checks, and access tracking.",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "author": {
     "name": "stark-shark",
     "url": "https://github.com/stark-shark"
