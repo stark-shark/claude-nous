@@ -27291,7 +27291,7 @@ ${m.body}`;
 }
 
 // src/index.ts
-var VERSION = true ? "1.1.5" : "0.0.0-dev";
+var VERSION = true ? "1.2.0" : "0.0.0-dev";
 var _emitWarning = process.emitWarning.bind(process);
 process.emitWarning = ((warning, ...rest) => {
   const msg = typeof warning === "string" ? warning : warning?.message ?? "";
