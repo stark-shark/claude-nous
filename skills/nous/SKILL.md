@@ -108,7 +108,7 @@ The plugin ships a `nous-worker` subagent pinned to **Haiku** — same nous_* to
 - **Batch operations** — multiple saves/loads/searches in one request; the handoff overhead amortizes.
 - **Large compressions** — turning a long transcript / discussion / file dump into a memory. Mechanical; Haiku does it well.
 - **Query expansion (recall ladder step 3)** — when cold-tier confidence is low, ask it to return a JSON array of synonym/entity query variants, then re-search yourself.
-- **Import / backfill** — summarizing historical sessions in batches (~10 per launch) during `/nous-import`.
+- **Import / backfill** — summarizing historical sessions in batches (~10 per launch) during `/nous:import`.
 - **Audits** — `nous_check` across many memories, `nous_export`, or bulk `nous_decode`.
 
 Example:

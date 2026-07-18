@@ -95,13 +95,13 @@ export function preturnRecall(
   const terms = extractTerms(prompt);
   if (terms.length === 0) return "";
 
-  // Precision first: implicit-AND over the salient terms. Recall fallback: OR.
-  let hits: PreturnHit[] = [];
-  if (terms.length > 1) {
-    hits = queryHits(db, sanitizeFtsQuery(terms.join(" ")), excludeSession);
-  }
+  // Precision first: implicit-AND over the salient terms (a single term IS the
+  // strict query). Recall fallback: OR — gated by preturn.looseFallback for
+  // users who find loose matches noisy.
+  const strict = sanitizeFtsQuery(terms.join(" "));
+  let hits: PreturnHit[] = strict ? queryHits(db, strict, excludeSession) : [];
   let fallback = false;
-  if (hits.length === 0) {
+  if (hits.length === 0 && terms.length > 1 && config.preturn.looseFallback) {
     const orMatch = terms
       .map((t) => sanitizeFtsQuery(t))
       .filter(Boolean)

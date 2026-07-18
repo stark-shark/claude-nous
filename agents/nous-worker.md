@@ -105,7 +105,7 @@ The parent may dispatch you for these specific jobs. All output goes back to the
 
 - **Session summarization.** Given a session transcript, produce strict JSON `{"summary": string, "decisions": string[], "open_threads": string[]}`. summary = 2-4 sentences on what happened; keep file names / identifiers / numbers verbatim. Empty arrays when nothing fits. No prose outside the JSON.
 
-- **Import batching.** During `/nous-import`, summarize a batch of historical sessions (default ~10). For each, read it from the cold tier and produce the summary JSON above. Idempotent — skip anything already summarized. Report counts.
+- **Import batching.** During `/nous:import`, summarize a batch of historical sessions (default ~10). For each, read it from the cold tier and produce the summary JSON above. Idempotent — skip anything already summarized. Report counts.
 
 - **Memory-maintenance review.** Scan MEMORY.md + user.md for dedup / redundancy / staleness / cap pressure. Return proposed changes as `nous_save` **batch** ops (add+replace) — a one-line diff each. Do NOT apply content rewrites or any user.md edit yourself; return them for the parent to stage/confirm.
 

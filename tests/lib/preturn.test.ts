@@ -69,6 +69,22 @@ describe.skipIf(!sqliteAvailable())("preturnRecall", () => {
     expect(out).toBe("");
   });
 
+  it("looseFallback:false suppresses OR-fallback matches", () => {
+    seed("sess-vite-2", "projA", "we fixed the vite proxy config here");
+    const strictOnly = {
+      ...DEFAULT_CONFIG,
+      preturn: { ...DEFAULT_CONFIG.preturn, looseFallback: false },
+    };
+    // Only one of the salient terms ("vite") appears in history — the strict
+    // all-terms query misses, and with looseFallback off nothing is injected.
+    const loose = preturnRecall(db, DEFAULT_CONFIG, "compare vite against webpack turbopack rspack");
+    const strict = preturnRecall(db, strictOnly, "compare vite against webpack turbopack rspack");
+    expect(loose).toContain("loose match");
+    expect(strict).toBe("");
+    // A full strict match still injects.
+    expect(preturnRecall(db, strictOnly, "the vite proxy config")).toContain("NOUS RECALL");
+  });
+
   it("never surfaces subagent sessions and caps at maxSessions", () => {
     seed("sess-sub", "projA", "vite proxy daemon internals", { source: "subagent" });
     for (let i = 0; i < 5; i++) {

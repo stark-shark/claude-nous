@@ -66,7 +66,7 @@ Run these three slash commands in Claude Code:
 
 That's it. The plugin self-registers its MCP server and hooks — no `~/.claude/settings.json` editing, no `.mcp.json` editing, no `npm install` or build step on your end (the bundled `dist/` ships with the repo).
 
-Verify with `/plugin` (Nous should show enabled), `/mcp` (the `nous` server should show connected), and `/nous-help`.
+Verify with `/plugin` (Nous should show enabled), `/mcp` (the `nous` server should show connected), and `/nous:help`.
 
 ### Migrating from Recall
 
@@ -104,9 +104,9 @@ To also forget the marketplace source (full wipe):
 /plugin marketplace remove nous
 ```
 
-### `/nous-help`
+### `/nous:help`
 
-Once installed, type `/nous-help` in Claude Code for an in-session overview — the tools, the symbol cheatsheet, the memory file format, install/upgrade/uninstall commands, and links to the deeper docs. Useful when you forget the notation or want to remind yourself what `nous_check --links` does without leaving the editor.
+Once installed, type `/nous:help` in Claude Code for an in-session overview — the tools, the symbol cheatsheet, the memory file format, install/upgrade/uninstall commands, and links to the deeper docs. Useful when you forget the notation or want to remind yourself what `nous_check --links` does without leaving the editor.
 
 ### Install from local clone (for development)
 

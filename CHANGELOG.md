@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1
+
+- **feat(preturn):** `preturn.looseFallback` (default true) — set `false` to suppress OR-fallback "loose match" reminders and inject only strict all-terms matches. Single-term prompts now run as a strict query instead of always being marked loose.
+- **polish(commands):** command files renamed to drop the redundant `nous-` prefix. Claude Code namespaces plugin commands as `/<plugin>:<file>`, so `/nous:nous-help` becomes `/nous:help` (same for status/find/remember/forget/rules/skill/import/export). Docs updated.
+
 ## 1.2.0
 
 Bug/gap fixes and Hermes-inspired features from a comparative audit against hermes-agent's memory subsystem.

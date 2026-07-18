@@ -82,6 +82,10 @@ export interface NousConfig {
     enabled: boolean;
     maxSessions: number;    // max one-line session reminders injected
     minPromptChars: number; // skip trivial prompts ("yes", "continue")
+    // When the strict all-terms match finds nothing, retry with OR (any term).
+    // Set false if the "loose match" reminders feel noisy — strict-only mode
+    // trades recall for precision.
+    looseFallback: boolean;
   };
   // Recall ladder tuning.
   ladder: {
@@ -166,6 +170,7 @@ export const DEFAULT_CONFIG: NousConfig = {
     enabled: true,
     maxSessions: 3,
     minPromptChars: 12,
+    looseFallback: true,
   },
   ladder: {
     expandWindow: 5,

@@ -84,7 +84,8 @@
   "preturn": {
     "enabled": true,
     "maxSessions": 3,
-    "minPromptChars": 12   // skip trivial prompts ("yes", "continue")
+    "minPromptChars": 12,  // skip trivial prompts ("yes", "continue")
+    "looseFallback": true  // false = strict all-terms matches only (quieter)
   },
 
   // Recall ladder tuning.

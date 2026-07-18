@@ -82,15 +82,15 @@ A copy of this cheatsheet is also written to `~/.claude/projects/<project-hash>/
 
 | Command | What it does |
 |---|---|
-| `/nous-find <query>` | Recall-ladder search over past sessions, cited by session + date. |
-| `/nous-remember <text>` | Force-save a durable memory now. |
-| `/nous-forget <query>` | Purge a session/query from the cold tier (preview → confirm). |
-| `/nous-status` | Memory + cold-tier health report. |
-| `/nous-rules` | View/edit the save-rules that govern what gets remembered. |
-| `/nous-skill` | Author/evolve the agent's own procedural skills. |
-| `/nous-import` | Day-one backfill: index + summarize existing Claude Code history. |
-| `/nous-export` | Back up memories to JSON. |
-| `/nous-help` | This overview. |
+| `/nous:find <query>` | Recall-ladder search over past sessions, cited by session + date. |
+| `/nous:remember <text>` | Force-save a durable memory now. |
+| `/nous:forget <query>` | Purge a session/query from the cold tier (preview → confirm). |
+| `/nous:status` | Memory + cold-tier health report. |
+| `/nous:rules` | View/edit the save-rules that govern what gets remembered. |
+| `/nous:skill` | Author/evolve the agent's own procedural skills. |
+| `/nous:import` | Day-one backfill: index + summarize existing Claude Code history. |
+| `/nous:export` | Back up memories to JSON. |
+| `/nous:help` | This overview. |
 
 ---
 

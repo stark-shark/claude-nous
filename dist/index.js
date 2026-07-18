@@ -23283,7 +23283,8 @@ var DEFAULT_CONFIG = {
   preturn: {
     enabled: true,
     maxSessions: 3,
-    minPromptChars: 12
+    minPromptChars: 12,
+    looseFallback: true
   },
   ladder: {
     expandWindow: 5,
@@ -27192,12 +27193,10 @@ function preturnRecall(db, config3, prompt, excludeSession = "") {
   if (!db.ftsAvailable) return "";
   const terms = extractTerms(prompt);
   if (terms.length === 0) return "";
-  let hits = [];
-  if (terms.length > 1) {
-    hits = queryHits(db, sanitizeFtsQuery(terms.join(" ")), excludeSession);
-  }
+  const strict = sanitizeFtsQuery(terms.join(" "));
+  let hits = strict ? queryHits(db, strict, excludeSession) : [];
   let fallback = false;
-  if (hits.length === 0) {
+  if (hits.length === 0 && terms.length > 1 && config3.preturn.looseFallback) {
     const orMatch = terms.map((t) => sanitizeFtsQuery(t)).filter(Boolean).join(" OR ");
     if (!orMatch) return "";
     hits = queryHits(db, orMatch, excludeSession);
